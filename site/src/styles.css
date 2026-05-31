@@ -103,12 +103,21 @@ body {
   justify-content: center;
 }
 
-/* Letterboxed so the PNG never distorts; overlay later matches this rect. */
+/* Letterboxed so the PNG never distorts; overlay matches this rect. */
 .plotpage__image {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
   user-select: none;
+}
+
+/* Overlay sits over the whole stage; highlight/deck layers draw here. It must
+   not intercept pointer events meant for the plot underneath. */
+.plotpage__overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
 }
 
 .plotpage__placeholder {
