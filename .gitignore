@@ -1,0 +1,33 @@
+# Data — never commit (it's huge and contains user DIDs).
+# The trailing-* form also covers the space-named backup folders
+# ("bsky_data BACKUP/", "bsky_data NEWER BACKUP/"), whose state.json
+# files embed full set_A/set_B/done_users DID lists.
+bsky_data*/
+*.parquet
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Spyder / IDE
+.spyderproject
+.spyproject
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local logs/outputs — console captures embed handles, DIDs, follower counts
+logs/
+*.log
+*_run.txt
+test_run.txt
+health_check.txt
+verify_output.txt
