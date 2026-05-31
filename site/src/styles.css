@@ -1,0 +1,123 @@
+:root {
+  /* Mirrors the matplotlib dark theme in plots.py */
+  --bg: #0e1116;
+  --panel: #1f2933;
+  --text: #e6edf3;
+  --muted: #9aa4b1;
+  --accent: #1d9bf0;
+  --tabbar-h: 88px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "DejaVu Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ---- Tab bar (~10% height) ---- */
+.tabbar {
+  flex: 0 0 var(--tabbar-h);
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--panel);
+  scrollbar-width: thin;
+}
+
+.tab {
+  flex: 0 0 auto;
+  min-width: 132px;
+  height: 100%;
+  padding: 8px 12px;
+  display: flex;
+  align-items: flex-end;
+  background: #11151b;
+  border: 1px solid var(--panel);
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+.tab:hover { transform: translateY(-1px); }
+
+.tab--active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.tab__label {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  line-height: 1.2;
+}
+
+/* ---- Plot page (~90% height) ---- */
+.plotpage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 20px 20px;
+}
+
+.plotpage__header { flex: 0 0 auto; margin-bottom: 8px; }
+
+.plotpage__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.plotpage__subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+}
+
+.plotpage__stage {
+  flex: 1 1 auto;
+  position: relative;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Letterboxed so the PNG never distorts; overlay later matches this rect. */
+.plotpage__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.plotpage__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--muted);
+  border: 1px dashed var(--panel);
+  border-radius: 12px;
+}
