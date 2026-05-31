@@ -80,6 +80,14 @@ import polars as pl
 
 from bsky_likes import config
 
+import os
+# When WEB_EXPORT=1, each plot cell also emits a title-suppressed PNG + bounds
+# for the website, and per-handle lookups are written at the end. The export
+# logic lives in export_web.py; plots.py only carries thin guarded hooks.
+WEB_EXPORT = os.environ.get("WEB_EXPORT") == "1"
+if WEB_EXPORT:
+    import export_web as ew
+
 PROJECT_DIR = config.PROJECT_DIR
 PLOTS_DIR   = config.PLOTS_DIR
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -151,14 +159,23 @@ posts_clean = (posts
     .filter(pl.col("post_created_at") >= pl.datetime(2023, 1, 1, time_zone="UTC")))
 
 joined = (likes
-    .join(posts_clean, on="post_uri", how="inner")
-    .unique(subset=["liker_did", "post_uri"]))   # drop the ~270 dupes
+    .join(posts_clean, on="post_uri", how="inner"))
+# NOTE: previously this chained .unique(subset=["liker_did","post_uri"]) to drop
+# ~270 re-like dupes. But unique() over 74M string key-pairs (~10 GB of keys)
+# triggers a native access-violation in polars 1.40 (both engines) — this is the
+# OOM-class crash behind the earlier failures. It's dropped because those
+# ~270 / 74M rows are invisible to every aggregate here, and for the event-based
+# plots (engagement age, day/hour heatmap) an unlike->relike is a real, distinct
+# like event that should count anyway.
 
-# Keep joined lazy — materialize only the columns each plot needs
+# Keep joined lazy — materialize only the columns each plot needs. The full join
+# is large, so every joined_lazy collection uses the streaming engine (bounded
+# memory, identical results). posts_df/users_df are small enough to collect
+# eagerly.
 joined_lazy = joined
 posts_df = posts_clean.collect()
 users_df = users.collect()
-n_joined = joined_lazy.select(pl.len()).collect().item()
+n_joined = joined_lazy.select(pl.len()).collect(engine="streaming").item()
 print(f"Joined frame: {n_joined:,} rows (lazy)")
 print(f"Posts:        {len(posts_df):,} rows")
 print(f"Users:        {len(users_df):,} rows")
@@ -270,6 +287,8 @@ ax.legend(facecolor="#1f2933", edgecolor="none", loc="upper left")
 ax.text(0.03, 0.5,
         '"Greed, for lack of a better word, is good."\n— Gordon Gekko, Wall Street',
         transform=ax.transAxes, ha="left", va="center", **QUOTE_STYLE)
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "long-tail", x_log=False, y_log=False)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
@@ -305,6 +324,8 @@ ax.set_title("Higher y = a few things you've liked blew up\n"
              fontsize=10, style="italic", color="gray", pad=10)
 ax.legend(facecolor="#1f2933", edgecolor="none", loc="upper left")
 plt.savefig(PLOTS_DIR / "02_hipster_index.png")
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "typical-popularity", x_log=True, y_log=True)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
@@ -334,7 +355,7 @@ sampled = (joined_lazy
     .with_columns(
         ((pl.col("log_lc") / 6.0) * n_bins).cast(pl.Int32).alias("bin_idx")
     )
-    .collect())
+    .collect(engine="streaming"))
 
 # Map liker_did -> small integer row index (0..n_users-1)
 unique_dids = sampled.select("liker_did").unique().with_row_index("row_idx")
@@ -396,6 +417,8 @@ ax.text(0.97, 0.62,
         '— the Hybrid, Battlestar Galactica',
         transform=ax.transAxes, ha="right", va="top", **QUOTE_STYLE)
 plt.savefig(PLOTS_DIR / "03_power_curve.png")
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "popularity-curve", x_log=False, y_log=False)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
@@ -448,6 +471,8 @@ ax.text(0.03, 0.97,
         transform=ax.transAxes, ha="left", va="top",
         **{**QUOTE_STYLE, "fontsize": 9})
 plt.savefig(PLOTS_DIR / "05b_like_repost_authors.png")
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "like-repost", x_log=True, y_log=True)
 plt.show()
 plt.close('all')
 
@@ -487,21 +512,34 @@ plt.close('all')  # free figure memory from the previous cell
 # For every like, age_at_like = like_created_at - post_created_at.
 print("\n[7/10] Engagement Half-Life")
 
-# Filter in polars; only materialize the surviving values
-ages_sec = (joined_lazy
+# Bin edges in seconds, log-spaced from 1 minute to 1 year (59 bins).
+edges = np.logspace(np.log10(60), np.log10(365*24*3600), 60)
+_lo, _hi, _nb = np.log10(60), np.log10(365 * 24 * 3600), len(edges) - 1
+_step = (_hi - _lo) / _nb
+
+# Histogram the per-like age INSIDE polars: assign each age to a log-bin and
+# count per bin, so only the 59 bin counts come back — never the 73M ages. This
+# is identical to ax.hist(ages, bins=edges) but avoids materializing the full
+# join output in memory (which OOM/segfaults at this data scale).
+_binned = (joined_lazy
     .select(
         ((pl.col("like_created_at") - pl.col("post_created_at"))
          .dt.total_seconds()).alias("age")
     )
     .filter((pl.col("age") > 0) & (pl.col("age") < 365 * 24 * 3600))
-    .collect()
-    ["age"].to_numpy())
+    .with_columns(pl.col("age").log10().alias("la"))
+    .filter((pl.col("la") >= _lo) & (pl.col("la") < _hi))
+    .with_columns(((pl.col("la") - _lo) / _step).floor().cast(pl.Int32).alias("bi"))
+    .group_by("bi").agg(pl.len().alias("n"))
+    .collect(engine="streaming"))
 
-# Bin edges in seconds, log-spaced from 1 minute to 1 year
-edges = np.logspace(np.log10(60), np.log10(365*24*3600), 60)
+counts = np.zeros(_nb)
+for _r in _binned.iter_rows(named=True):
+    if 0 <= _r["bi"] < _nb:
+        counts[_r["bi"]] = _r["n"]
 
 fig, ax = plt.subplots(figsize=(11, 6.5))
-ax.hist(ages_sec, bins=edges, color=BSKY_BLUE, edgecolor="none", alpha=0.85)
+ax.stairs(counts, edges, fill=True, color=BSKY_BLUE, alpha=0.85)
 ax.set_xscale("log")
 
 # Reference vertical lines for human-readable times
@@ -530,6 +568,8 @@ ax.text(0.97, 0.75,
         transform=ax.transAxes, ha="right", va="top",
         **{**QUOTE_STYLE, "fontsize": 9})
 plt.savefig(PLOTS_DIR / "07_engagement_half_life.png")
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "half-life", x_log=True, y_log=False)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
@@ -587,6 +627,8 @@ ax.set_ylabel("Avg likes on the posts you like")
 ax.set_title("Bluesky users are so kind <3\n"
              "the more popular we are\nthe less popular the content we like",
              fontsize=12)
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "activity", x_log=True, y_log=True)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
@@ -760,6 +802,8 @@ ax.text(0.02, 0.98,
         bbox=dict(facecolor="#0e1116", edgecolor="none", alpha=0.7, pad=4))
 
 plt.savefig(PLOTS_DIR / "09_5_highlights.png")
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "punching", x_log=True, y_log=True)
 plt.show()
 plt.close('all')
 
@@ -800,7 +844,7 @@ times = (joined_lazy
     .group_by(["dow", "hour"])
     .agg(pl.len().alias("n"))
     .sort(["dow", "hour"])
-    .collect())
+    .collect(engine="streaming"))
 
 n_heat = int(times["n"].sum())
 print(f"  per-user whole-week trim: {n_heat:,} likes")
@@ -826,7 +870,21 @@ fig.text(0.86, 0.88,
 cb = fig.colorbar(im, ax=ax, label="likes")
 cb.outline.set_visible(False)
 plt.savefig(PLOTS_DIR / "10_heatmap.png")
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "wakes-up", x_log=False, y_log=False)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
 print(f"\nAll plots saved to {PLOTS_DIR}")
+
+
+# %% WEB EXPORT — per-handle lookups (only when WEB_EXPORT=1)
+if WEB_EXPORT:
+    print("\n=== WEB LOOKUP EXPORT ===")
+    ew.export_activity(per_liker)
+    ew.export_typical_popularity(per_liker)
+    ew.export_leaderboards(per_liker, n=50)
+    ew.export_punching(author_df)              # Plot 9.5 plotted set (pandas)
+    ew.export_like_repost(author_eng, users_df)
+    print(f"Web lookups written -> {ew.SITE_PLOTS}")
+    # Deferred (design needed): popularity-curve histograms, half-life.
