@@ -1,0 +1,16 @@
+{
+  "xMin": 0.0,
+  "xMax": 1.0,
+  "yMin": 0.0,
+  "yMax": 1.0,
+  "xLog": false,
+  "yLog": false,
+  "imgWidth": 1400,
+  "imgHeight": 1400,
+  "plotArea": {
+    "left": 178.5,
+    "top": 168.0,
+    "right": 1256.5,
+    "bottom": 1246.0
+  }
+}

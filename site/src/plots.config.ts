@@ -95,10 +95,11 @@ export const PLOTS: PlotConfig[] = [
     title: "Engagement Half-Life",
     subtitle: "How fresh is a post when it gets liked?",
     image: "/plots/half-life.png",
-    bounds: "/plots/half-life.bounds.json",
-    searchable: true,
+    // Aggregate histogram — no per-handle (x,y), so not searchable. (Guide
+    // imagined a deck-scatter here; revisit if we want a per-user variant.)
+    searchable: false,
     tabAnim: "spotlight-points",
-    highlight: "deck-scatter",
+    highlight: null,
   },
   {
     id: "activity",
