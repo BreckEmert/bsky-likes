@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 
 export interface Region {
-  id: number;
   name: string;
   x: number;
   y: number;
   size: number;
+  tier?: number; // 1 = broad (overview), 2 = finer (appears ~37% zoom)
 }
 
 /** Load the named map regions (cluster centroids + labels) for the TextLayer. */

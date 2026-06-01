@@ -85,9 +85,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const FADE_END_PCT = 50;
   const bgOpacity =
     clamp((FADE_END_PCT - zoomPct) / (FADE_END_PCT - FADE_START_PCT), 0, 1) * 0.95;
-  // Region labels orient you at the overview; fade them out once you're zoomed
-  // in enough to be inspecting individuals (~35% -> 70%).
-  const labelOpacity = clamp((70 - zoomPct) / (70 - 35), 0, 1);
+  // Two label tiers across zoom. Tier 1 (broad) carries the overview then fades
+  // out by ~38%; tier 2 (finer sub-topics) crossfades in ~30->40% and persists,
+  // fading out at deep zoom when you're inspecting individuals.
+  const tier1Opacity = clamp((38 - zoomPct) / (38 - 26), 0, 1);
+  const tier2Opacity =
+    clamp((zoomPct - 30) / 10, 0, 1) * clamp((82 - zoomPct) / (82 - 70), 0, 1);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -140,15 +143,18 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
         })
       );
     }
-    // Region labels (cluster centroids), on top, fading with zoom.
-    if (regions.length && labelOpacity > 0) {
+    // Region labels in two zoom-gated tiers (broad overview -> finer at ~37%).
+    const labelTier = (tier: number, opacity: number, sizeBase: number) => {
+      if (!regions.length || opacity <= 0) return;
+      const rs = regions.filter((r) => (r.tier ?? 1) === tier);
+      if (!rs.length) return;
       out.push(
         new TextLayer({
-          id: "regions",
-          data: regions,
+          id: `regions-t${tier}`,
+          data: rs,
           getPosition: (r: Region) => [r.x, r.y],
           getText: (r: Region) => r.name,
-          getSize: (r: Region) => clamp(12 + 4 * Math.log10(r.size), 14, 30),
+          getSize: (r: Region) => clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12),
           sizeUnits: "pixels",
           getColor: [255, 255, 255, 235],
           fontFamily: '"DejaVu Sans", system-ui, sans-serif',
@@ -159,14 +165,16 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
           backgroundPadding: [7, 4, 7, 4],
           getTextAnchor: "middle",
           getAlignmentBaseline: "center",
-          opacity: labelOpacity,
+          opacity,
           pickable: false,
-          updateTriggers: { opacity: [labelOpacity] },
+          updateTriggers: { opacity: [opacity] },
         })
       );
-    }
+    };
+    labelTier(1, tier1Opacity, 13); // broad: larger text, fades out by ~38%
+    labelTier(2, tier2Opacity, 11); // finer: smaller text, fades in ~30-40%
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, labelOpacity]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, tier1Opacity, tier2Opacity]);
 
   return (
     <div className="exploremap" ref={ref}>
