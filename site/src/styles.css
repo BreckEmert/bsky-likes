@@ -205,6 +205,90 @@ body {
   display: inline-block;
 }
 
+/* ---- Leaderboards (list-row) ---- */
+.listrows {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  /* top padding clears the floating search box (top-left over the stage) */
+  padding: 48px 4px 0;
+  min-height: 0;
+  position: relative;
+}
+
+.listcol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.listcol__title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.listcol__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  counter-reset: rank;
+  min-height: 0;
+}
+
+.listrow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.listrow__rank { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.listrow__handle {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 1;
+}
+/* faint magnitude bar behind the handle */
+.listrow__bar {
+  position: absolute;
+  left: 36px;
+  bottom: 2px;
+  height: 3px;
+  border-radius: 2px;
+  opacity: 0.35;
+}
+
+.listrow--sel {
+  background: rgba(236, 72, 153, 0.18);
+  outline: 1px solid #ec4899;
+}
+.listrow--sel .listrow__handle { color: #ec4899; font-weight: 600; }
+
+.listrows__note {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  right: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(17, 21, 27, 0.95);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+}
+
+.listrows__loading { color: var(--muted); padding: 20px; }
+
 .plotpage__placeholder {
   display: flex;
   align-items: center;

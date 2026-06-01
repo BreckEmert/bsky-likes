@@ -96,6 +96,7 @@ export const PLOTS: PlotConfig[] = [
     searchable: true,
     tabAnim: "rising-bars",
     highlight: "list-row",
+    data: { rows: "/plots/leaderboards.json" },
   },
   {
     id: "half-life",

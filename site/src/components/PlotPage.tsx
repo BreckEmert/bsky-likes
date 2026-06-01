@@ -9,8 +9,10 @@ import {
 import { useElementSize } from "../lib/useElementSize.ts";
 import { useBounds } from "../lib/useBounds.ts";
 import { usePointData } from "../lib/usePointData.ts";
+import { useLeaderboard } from "../lib/useLeaderboard.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { SvgPoint } from "./highlights/SvgPoint.tsx";
+import { ListRows } from "./highlights/ListRows.tsx";
 
 interface Props {
   plot: PlotConfig;
@@ -36,6 +38,10 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   // Binary point data (handles + positions) for every searchable point plot
   // (svg-point and deck-scatter). One loader, one contract.
   const points = usePointData(plot.data?.handles, plot.data?.positions);
+  // Leaderboards (list-row) loads ranked rows instead of a PNG + point data.
+  const leaderboard = useLeaderboard(
+    plot.highlight === "list-row" ? plot.data?.rows : undefined
+  );
 
   useEffect(() => setNatural(null), [plot.id]);
 
@@ -46,7 +52,11 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   const effBounds: Bounds | null =
     bounds ?? (natural ? identityBounds(natural.w, natural.h) : null);
 
-  const handleIndex = points ? points.handles : [];
+  const handleIndex = points
+    ? points.handles
+    : leaderboard
+    ? [...leaderboard.mostObscure, ...leaderboard.mostMainstream].map((r) => r.handle)
+    : [];
   const selectedPoint =
     points && selectedHandle ? points.get(selectedHandle) ?? null : null;
 
@@ -110,6 +120,8 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
               })
             }
           />
+        ) : plot.highlight === "list-row" ? (
+          <ListRows data={leaderboard} selectedHandle={selectedHandle} />
         ) : (
           <div className="plotpage__placeholder">
             <span>{plot.tabLabel} — built in a later step</span>
