@@ -35,6 +35,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const regions = useRegions();
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [viewState, setViewState] = useState<VS | null>(null);
+  const viewStateRef = useRef<VS | null>(null); // always-latest, for fly-to
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const initialZoom = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
@@ -48,7 +49,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     initialZoom.current = z;
     // Cap zoom so users can't get lost: no zoom-out past the fit; bounded in.
     setZoomRange({ min: z, max: z + ZOOM_SPAN });
-    setViewState({ target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: z });
+    const init: VS = { target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: z };
+    viewStateRef.current = init;
+    setViewState(init);
   }, [data, size, viewState]);
 
   // Fly to the selected handle's point (from search or another tab's selection).
@@ -57,9 +60,10 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     const sel = selectedHandle?.toLowerCase();
     if (!sel || !data.index.has(sel)) return;
     const i = data.index.get(sel)!;
+    const liveZoom = viewStateRef.current?.zoom ?? viewState.zoom;
     setViewState({
       target: [data.points[2 * i], data.points[2 * i + 1], 0],
-      zoom: Math.max(viewState.zoom, initialZoom.current + ZOOM_SPAN),
+      zoom: Math.max(liveZoom, initialZoom.current + ZOOM_SPAN),
       transitionDuration: 800,
       transitionInterpolator: new LinearInterpolator(["target", "zoom"]),
     } as never);
@@ -162,9 +166,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
           characterSet: "auto",
           // Soft dark halo (SDF outline) instead of a solid box -- a subtle glow
           // for legibility over the colorful field, no rectangle.
-          fontSettings: { sdf: true, buffer: 12, radius: 16 },
-          outlineWidth: 5,
-          outlineColor: [6, 9, 14, 230],
+          fontSettings: { sdf: true, buffer: 12, radius: 18 },
+          outlineWidth: 7,
+          outlineColor: [6, 9, 14, 235],
           getTextAnchor: "middle",
           getAlignmentBaseline: "center",
           opacity,
@@ -192,11 +196,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
               : true) as never
           }
           viewState={viewState as never}
-          onViewStateChange={((e: { viewState: VS }) => {
+          onViewStateChange={((e: { viewState: VS; interactionState?: { inTransition?: boolean } }) => {
             // Clamp panning to (padded) data bounds so users can't drift into
-            // the void; the controller already clamps zoom to min/max.
+            // the void -- but NOT during a fly-to transition, where clamping the
+            // interpolating target fights the interpolator and causes a jump.
             const vs = e.viewState;
-            if (data) {
+            if (data && !e.interactionState?.inTransition) {
               const b = data.bounds;
               const px = (b.xMax - b.xMin) * 0.06;
               const py = (b.yMax - b.yMin) * 0.06;
@@ -206,6 +211,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
                 0,
               ];
             }
+            viewStateRef.current = vs;
             setViewState(vs);
           }) as never}
           layers={layers as never}
