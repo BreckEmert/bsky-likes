@@ -68,12 +68,14 @@ export const PLOTS: PlotConfig[] = [
       "each blue line = one user's histogram of how popular their liked posts are",
     image: "/plots/popularity-curve.png",
     bounds: "/plots/popularity-curve.bounds.json",
-    // Static for now. The svg-line highlight (draw the searched user's own
-    // histogram over the faint mass) needs a per-user histogram asset (~9MB
-    // quantized). Pending a product call on shipping that on a barebones site.
-    searchable: false,
+    searchable: true,
     tabAnim: "drifting-lines",
     highlight: "svg-line",
+    data: {
+      handles: "/plots/popularity-curve.handles.bin",
+      histograms: "/plots/popularity-curve.histograms.bin",
+      histmeta: "/plots/popularity-curve.histmeta.json",
+    },
   },
   {
     id: "like-repost",

@@ -10,8 +10,10 @@ import { useElementSize } from "../lib/useElementSize.ts";
 import { useBounds } from "../lib/useBounds.ts";
 import { usePointData } from "../lib/usePointData.ts";
 import { useLeaderboard } from "../lib/useLeaderboard.ts";
+import { useHistograms } from "../lib/useHistograms.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { SvgPoint } from "./highlights/SvgPoint.tsx";
+import { SvgLine } from "./highlights/SvgLine.tsx";
 import { ListRows } from "./highlights/ListRows.tsx";
 import { ProfileCard } from "./ProfileCard.tsx";
 
@@ -43,6 +45,13 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   const leaderboard = useLeaderboard(
     plot.highlight === "list-row" ? plot.data?.rows : undefined
   );
+  // Per-user histograms for the svg-line plot (popularity-curve).
+  const isLine = plot.highlight === "svg-line";
+  const hist = useHistograms(
+    isLine ? plot.data?.handles : undefined,
+    isLine ? plot.data?.histograms : undefined,
+    isLine ? plot.data?.histmeta : undefined
+  );
 
   useEffect(() => setNatural(null), [plot.id]);
 
@@ -55,11 +64,15 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
 
   const handleIndex = points
     ? points.handles
+    : hist
+    ? hist.handles
     : leaderboard
     ? [...leaderboard.mostObscure, ...leaderboard.mostMainstream].map((r) => r.handle)
     : [];
   const selectedPoint =
     points && selectedHandle ? points.get(selectedHandle) ?? null : null;
+  const selectedDensity =
+    hist && selectedHandle ? hist.get(selectedHandle) ?? null : null;
 
   const dp = debugPoint();
   const crosshair =
@@ -74,7 +87,9 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
 
   // Is the selected handle absent from this plot's data?
   const notHere =
-    !!selectedHandle && plot.searchable && points !== null && !selectedPoint;
+    !!selectedHandle &&
+    plot.searchable &&
+    ((points !== null && !selectedPoint) || (hist !== null && !selectedDensity));
 
   return (
     <main className="plotpage">
@@ -147,6 +162,15 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
               <SvgPoint
                 handle={selectedHandle}
                 point={selectedPoint}
+                bounds={bounds}
+                imgRect={imgRect}
+              />
+            )}
+            {plot.highlight === "svg-line" && (
+              <SvgLine
+                handle={selectedHandle}
+                density={selectedDensity}
+                hist={hist}
                 bounds={bounds}
                 imgRect={imgRect}
               />
