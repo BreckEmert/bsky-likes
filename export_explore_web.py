@@ -26,6 +26,16 @@ GRID = 1024        # density image resolution (higher = crisper)
 BLUR = 2.6         # gaussian sigma (in cells); lower = crisper, less bloom
 
 df = pl.read_parquet(config.PROJECT_DIR / "umap_coords.parquet")
+# Restrict the plotted dots to the English-only user set (same set the topical
+# labels are built on), so the non-English language islands don't show as
+# unlabeled blobs. Falls back to all users if the filter file is absent.
+en_path = config.PROJECT_DIR / "english_dids.json"
+if en_path.exists():
+    en = set(json.loads(en_path.read_text()))
+    before = df.height
+    df = df.filter(pl.col("liker_did").is_in(list(en)))
+    print(f"[i] filtered to English set: {df.height:,} of {before:,} users")
+
 x = df["x"].to_numpy().astype(np.float64)
 y = df["y"].to_numpy().astype(np.float64)
 handles_all = [h.lower() for h in df["handle"].to_list()]

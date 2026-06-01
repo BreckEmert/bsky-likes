@@ -36,6 +36,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [viewState, setViewState] = useState<VS | null>(null);
   const viewStateRef = useRef<VS | null>(null); // always-latest, for fly-to
+  const flyingRef = useRef(false); // true during a fly-to transition (suppress echo/clamp)
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const initialZoom = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
@@ -61,11 +62,22 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     if (!sel || !data.index.has(sel)) return;
     const i = data.index.get(sel)!;
     const liveZoom = viewStateRef.current?.zoom ?? viewState.zoom;
-    setViewState({
+    const dest: VS = {
       target: [data.points[2 * i], data.points[2 * i + 1], 0],
       zoom: Math.max(liveZoom, initialZoom.current + ZOOM_SPAN),
+    };
+    flyingRef.current = true;
+    setViewState({
+      ...dest,
       transitionDuration: 800,
       transitionInterpolator: new LinearInterpolator(["target", "zoom"]),
+      // When the fly ends, commit a clean (transition-free) state and re-enable
+      // normal echo/clamp. Echoing deck's interpolated state mid-fly caused the
+      // overshoot ("jump right, pan back"), so we suppress it while flying.
+      onTransitionEnd: () => {
+        flyingRef.current = false;
+        setViewState(dest);
+      },
     } as never);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHandle, data]);
@@ -196,12 +208,14 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
               : true) as never
           }
           viewState={viewState as never}
-          onViewStateChange={((e: { viewState: VS; interactionState?: { inTransition?: boolean } }) => {
-            // Clamp panning to (padded) data bounds so users can't drift into
-            // the void -- but NOT during a fly-to transition, where clamping the
-            // interpolating target fights the interpolator and causes a jump.
+          onViewStateChange={((e: { viewState: VS }) => {
             const vs = e.viewState;
-            if (data && !e.interactionState?.inTransition) {
+            viewStateRef.current = vs;
+            // During a fly-to, let deck run its own interpolation untouched --
+            // echoing the interpolated state back (and clamping it) fights the
+            // interpolator and causes the overshoot/jump.
+            if (flyingRef.current) return;
+            if (data) {
               const b = data.bounds;
               const px = (b.xMax - b.xMin) * 0.06;
               const py = (b.yMax - b.yMin) * 0.06;
@@ -211,7 +225,6 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
                 0,
               ];
             }
-            viewStateRef.current = vs;
             setViewState(vs);
           }) as never}
           layers={layers as never}
