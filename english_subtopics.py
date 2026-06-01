@@ -20,8 +20,8 @@ from sklearn.cluster import KMeans
 
 from bsky_likes import config
 
-TOTAL_SUBS = 29       # ~ total tier-2 clusters across all tier-1 topics
-TOPIC_SAMPLE = 30
+TOTAL_SUBS = 50       # ~ total tier-2 clusters across all tier-1 topics
+TOPIC_SAMPLE = 40
 SEED = 0
 APPVIEW = "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles"
 Z_CACHE = config.PROJECT_DIR / "umap_tfidf_Z.npy"

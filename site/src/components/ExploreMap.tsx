@@ -85,12 +85,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const FADE_END_PCT = 50;
   const bgOpacity =
     clamp((FADE_END_PCT - zoomPct) / (FADE_END_PCT - FADE_START_PCT), 0, 1) * 0.95;
-  // Two label tiers across zoom. Tier 1 (broad) carries the overview then fades
-  // out by ~38%; tier 2 (finer sub-topics) crossfades in ~30->40% and persists,
-  // fading out at deep zoom when you're inspecting individuals.
-  const tier1Opacity = clamp((38 - zoomPct) / (38 - 26), 0, 1);
-  const tier2Opacity =
-    clamp((zoomPct - 30) / 10, 0, 1) * clamp((82 - zoomPct) / (82 - 70), 0, 1);
+  // Two label tiers across zoom, hard-swapped at ~36% (no fade -- a crisp cut
+  // reads better than the crossfade). Tier 1 (broad) on the overview; tier 2
+  // (finer sub-topics) once you've zoomed past the threshold.
+  const TIER_SWAP_PCT = 36;
+  const tier1Opacity = zoomPct < TIER_SWAP_PCT ? 1 : 0;
+  const tier2Opacity = zoomPct >= TIER_SWAP_PCT ? 1 : 0;
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -156,13 +156,15 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
           getText: (r: Region) => r.name,
           getSize: (r: Region) => clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12),
           sizeUnits: "pixels",
-          getColor: [255, 255, 255, 235],
+          getColor: [240, 246, 252, 255],
           fontFamily: '"DejaVu Sans", system-ui, sans-serif',
           fontWeight: 700,
           characterSet: "auto",
-          background: true,
-          getBackgroundColor: [10, 13, 18, 165],
-          backgroundPadding: [7, 4, 7, 4],
+          // Soft dark halo (SDF outline) instead of a solid box -- a subtle glow
+          // for legibility over the colorful field, no rectangle.
+          fontSettings: { sdf: true, buffer: 12, radius: 16 },
+          outlineWidth: 5,
+          outlineColor: [6, 9, 14, 230],
           getTextAnchor: "middle",
           getAlignmentBaseline: "center",
           opacity,

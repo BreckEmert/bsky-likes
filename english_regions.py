@@ -37,9 +37,16 @@ from bsky_likes import config
 MIN_USER_LIKES = 50
 MIN_POST_LIKERS = 4
 SVD_DIM = 50
-K_LANG = 140          # fine pass to isolate languages (140 caught the most non-English cleanly)
+K_LANG = 140          # iter-0 fine pass (catches the big native-bio languages cleanly)
+K_LANG_FINE = 340     # later iters: finer, to isolate small native-bio islands
 LANG_SAMPLE = 18      # bios sampled per fine cluster for language detection
-EN_THRESH = 0.6       # keep a cluster only if >= this fraction of bios are English
+# Seed accounts flagged as sitting in non-English "outer islands" whose members
+# write English bios (so language detection can't catch them). We drop each
+# seed's fine-grained cluster (the island), unless it lands in a large cluster
+# (i.e. it's actually English-core-embedded -> skip, don't nuke the core).
+SEED_ISLANDS = ["wickedwookie.bsky.social", "egbertl.bsky.social",
+                "crbelottilm.bsky.social", "hunosp.bsky.social", "lukree.bsky.social"]
+SEED_ISLAND_MAXSIZE = 2500   # only treat a seed's cluster as an island if <= this
 TOPIC_K = 10          # topical clusters among English users
 TOPIC_SAMPLE = 30     # bios sampled per topical cluster for naming
 SEED = 0
@@ -148,17 +155,18 @@ else:
     N = len(dids)
     alive = np.ones(N, bool)
     lang_tot = {}
-    for it in range(6):
+    for it in range(7):
         idx = np.where(alive)[0]
         if len(idx) < 3000:
             break
-        lab = KMeans(n_clusters=K_LANG, n_init=3, random_state=SEED).fit_predict(Z[idx])
+        K = K_LANG if it == 0 else K_LANG_FINE      # finer after iter 0
+        lab = KMeans(n_clusters=K, n_init=3, random_state=SEED).fit_predict(Z[idx])
         samp = {c: [handles[i] for i in rng.choice(idx[lab == c],
                     size=min(LANG_SAMPLE, int((lab == c).sum())), replace=False) if handles[i]]
-                for c in range(K_LANG)}
+                for c in range(K)}
         fetch_bios(sorted({h for hs in samp.values() for h in hs}))
         drop = np.zeros(N, bool); itlang = {}
-        for c in range(K_LANG):
+        for c in range(K):
             top, top_frac, en, ndet = cluster_lang(samp[c])
             # drop only if a NON-English language is the clear plurality
             if ndet >= 6 and top != "en" and top_frac >= 0.45 and en < 0.5:
@@ -168,13 +176,36 @@ else:
         alive &= ~drop
         for k, v in itlang.items():
             lang_tot[k] = lang_tot.get(k, 0) + v
-        print(f"    iter {it}: dropped {nd:,} ({sorted(itlang.items(), key=lambda x:-x[1])[:8]}) "
+        print(f"    iter {it} (K={K}): dropped {nd:,} ({sorted(itlang.items(), key=lambda x:-x[1])[:8]}) "
               f"-> {alive.sum():,} alive ({el()})", flush=True)
-        if nd < 0.002 * N:
+        if nd < 0.0015 * N:
             break
+
+    # --- seed-island removal: drop each flagged seed's fine cluster -----------
+    print("[2b] seed-island removal...", flush=True)
+    idx = np.where(alive)[0]
+    flab = KMeans(n_clusters=K_LANG_FINE, n_init=3, random_state=SEED).fit_predict(Z[idx])
+    hl = [(handles[i] or "").lower() for i in range(N)]
+    for seed in SEED_ISLANDS:
+        try:
+            si = hl.index(seed)
+        except ValueError:
+            print(f"    {seed}: not in dataset", flush=True); continue
+        if not alive[si]:
+            print(f"    {seed}: already removed", flush=True); continue
+        pos = np.where(idx == si)[0]
+        if not len(pos):
+            continue
+        c = flab[pos[0]]; members = idx[flab == c]
+        if len(members) <= SEED_ISLAND_MAXSIZE:
+            alive[members] = False
+            print(f"    {seed}: dropped island of {len(members):,}", flush=True)
+        else:
+            print(f"    {seed}: in large cluster ({len(members):,}) -> English-core, skipped", flush=True)
+
     en_mask = alive
     print(f"[2] kept {en_mask.sum():,} English; dropped {(~en_mask).sum():,} non-English "
-          f"({lang_tot}) ({el()})", flush=True)
+          f"({lang_tot} + seed islands) ({el()})", flush=True)
     EN_CACHE.write_text(json.dumps([dids[i] for i in np.where(en_mask)[0]]))
 
 # ---- topical pass on English users ----------------------------------------
