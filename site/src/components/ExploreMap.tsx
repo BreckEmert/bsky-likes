@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { OrthographicView, LinearInterpolator } from "@deck.gl/core";
-import { ScatterplotLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, BitmapLayer } from "@deck.gl/layers";
 import { useExploreData } from "../lib/useExploreData.ts";
 import { useElementSize } from "../lib/useElementSize.ts";
 import { SearchBox } from "./SearchBox.tsx";
@@ -40,8 +40,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     const z =
       Math.log2(Math.min(size.width / (xMax - xMin), size.height / (yMax - yMin))) - 0.2;
     initialZoom.current = z;
-    // Cap zoom so users can't get lost: barely out past the fit, deep but bounded in.
-    setZoomRange({ min: z - 0.6, max: z + 9 });
+    // Cap zoom so users can't get lost: no zoom-out past the fit; bounded in.
+    setZoomRange({ min: z, max: z + 6 });
     setViewState({ target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: z });
   }, [data, size, viewState]);
 
@@ -65,13 +65,24 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     if (!data || !viewState) return 0;
     return Math.min(data.n, Math.round(LOD_BASE * Math.pow(LOD_GROWTH, zoomDelta)));
   }, [data, viewState, zoomDelta]);
-  // Bigger dots at the overview (few, bold prominent accounts), smaller as the
-  // field fills in on zoom — makes the LOD reveal read clearly.
-  const pointRadius = clamp(3.0 - 0.28 * zoomDelta, 1.1, 3.0);
+  // Crisp small dots at the overview (the density background carries the color
+  // there); grow a bit as you zoom in for hover/click.
+  const pointRadius = clamp(1.0 + 0.45 * zoomDelta, 1.0, 6.0);
+  // Density-color background fades out by ~3/4 of the way in, leaving just dots.
+  const bgOpacity = clamp(1 - zoomDelta / 4.5, 0, 1) * 0.95;
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
+    const b = data.bounds;
     const out: unknown[] = [
+      // Smooth density-color field behind the dots; fades out as you zoom in.
+      new BitmapLayer({
+        id: "density",
+        image: "/explore/density.png",
+        bounds: [b.xMin, b.yMin, b.xMax, b.yMax],
+        opacity: bgOpacity,
+        updateTriggers: { opacity: [bgOpacity] },
+      }),
       new ScatterplotLayer({
         id: "points",
         data: {
@@ -112,7 +123,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity]);
 
   return (
     <div className="exploremap" ref={ref}>
