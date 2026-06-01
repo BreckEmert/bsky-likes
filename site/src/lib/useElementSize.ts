@@ -15,16 +15,28 @@ export function useElementSize<T extends HTMLElement>(): [
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Measure synchronously on mount so we have a correct size immediately,
-    // not only after the ResizeObserver's first (sometimes delayed) callback.
-    const r = el.getBoundingClientRect();
-    setSize({ width: r.width, height: r.height });
+    let raf = 0;
+    // Measure synchronously on mount; if layout isn't settled yet (size 0),
+    // retry on a few animation frames. Some headless/embedded renderers don't
+    // emit the ResizeObserver's initial callback, so we can't rely on it alone.
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width && r.height) setSize({ width: r.width, height: r.height });
+      else raf = requestAnimationFrame(measure);
+    };
+    measure();
     const ro = new ResizeObserver((entries) => {
       const cr = entries[0].contentRect;
-      setSize({ width: cr.width, height: cr.height });
+      if (cr.width && cr.height) setSize({ width: cr.width, height: cr.height });
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    const onResize = () => measure();
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   return [ref, size];

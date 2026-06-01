@@ -83,13 +83,22 @@ by_cell = np.argsort(cell[shuf], kind="stable")     # group shuffled pts by cell
 sorted_cells = cell[shuf][by_cell]
 _, start_idx, counts = np.unique(sorted_cells, return_index=True, return_counts=True)
 within = np.arange(n) - np.repeat(start_idx, counts)  # rank within each cell
-ranks = np.empty(n, dtype=np.int64)
-ranks[shuf[by_cell]] = within                         # rank per original index
+cnt = np.repeat(counts, counts)                       # cell size (sorted order)
+orig = shuf[by_cell]                                  # -> original indices
+ranks = np.empty(n, dtype=np.int64); ranks[orig] = within
+cell_cnt = np.empty(n, dtype=np.int64); cell_cnt[orig] = cnt
 
-# primary: cell-rank asc (even spread); secondary: density desc (cores first)
-order = np.lexsort((-pt_density, ranks))
-print(f"[i] {len(start_idx):,} occupied cells (SGRID={SGRID}); "
-      f"rank-0 layer = {int((ranks == 0).sum()):,} evenly-spread points")
+# Density-biased stratification key. ALPHA in [0,1]:
+#   0 -> pure even (one point per cell per tier; can look too uniform)
+#   1 -> proportional to cell density (full clustering, matches color field)
+# A small ALPHA pulls a few extra points into dense cells and fewer into sparse
+# cells for any LOD prefix, so the layer reads less uniform / more clustered.
+ALPHA = 0.4
+key = (ranks + 0.5) / np.power(cell_cnt, ALPHA)
+# primary: biased key asc; secondary: density desc (cores first within ties)
+order = np.lexsort((-pt_density, key))
+print(f"[i] {len(start_idx):,} occupied cells (SGRID={SGRID}, ALPHA={ALPHA}); "
+      f"rank-0 layer = {int((ranks == 0).sum()):,} seed points")
 
 xs = x[order].astype(np.float32)
 ys = y[order].astype(np.float32)

@@ -73,9 +73,13 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   // Tiny crisp dots at the overview (the density background carries the color
   // there); grow gently as you zoom in for hover/click.
   const pointRadius = clamp(0.35 + 0.45 * zoomDelta, 0.35, 4.5);
-  // Density-color background fades out by ~3/4 of the way in, leaving just dots.
-  const bgOpacity = clamp(1 - zoomDelta / 4.5, 0, 1) * 0.95;
   const zoomPct = Math.round((zoomDelta / ZOOM_SPAN) * 100);
+  // Density-color background: full until ~15% zoom, then linear out to nothing
+  // by ~55% (so ~70% opacity at 27%, ~50% at 37%, ~25% at 46%), leaving dots.
+  const FADE_START_PCT = 15;
+  const FADE_END_PCT = 55;
+  const bgOpacity =
+    clamp((FADE_END_PCT - zoomPct) / (FADE_END_PCT - FADE_START_PCT), 0, 1) * 0.95;
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
