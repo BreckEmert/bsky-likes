@@ -183,32 +183,34 @@ def export_punching(author_df):
     """Plot 9.5 / 'punching'. Axes: x = followers_count + 1 (log),
     y = likes_per_post + 1 (log). `author_df` is the plotted set (top ~4k +
     highlighted), a pandas DataFrame with handle/followers_count/likes_per_post.
-    JSON."""
-    mapping = {}
-    for _, r in author_df.iterrows():
-        h = r.get("handle")
-        if h:
-            mapping[str(h).lower()] = [
-                float(r["followers_count"]) + 1.0,
-                float(r["likes_per_post"]) + 1.0,
-            ]
-    write_json_lookup(mapping, SITE_PLOTS / "punching.lookup.json")
+    Binary (handles + positions), same contract as the 440k point plots."""
+    df = author_df[author_df["handle"].notna()]
+    handles = [str(h).lower() for h in df["handle"].tolist()]
+    xy = np.column_stack([
+        (df["followers_count"].to_numpy() + 1.0).astype(np.float32),
+        (df["likes_per_post"].to_numpy() + 1.0).astype(np.float32),
+    ])
+    write_handles_bin(handles, SITE_PLOTS / "punching.handles.bin")
+    write_positions_bin(xy, SITE_PLOTS / "punching.positions.bin")
 
 
 def export_like_repost(author_eng, users_df):
     """Plot 5 / 'like-repost'. Axes: x = avg_likes (log), y = avg_reposts (log),
     no +1 (the plot filters avg >= 1). `author_eng` is the polars frame from the
     cell (post_author_did, avg_likes, avg_reposts); join users_df for handle.
-    JSON."""
-    joined = author_eng.join(
-        users_df.select(["did", "handle"]),
-        left_on="post_author_did", right_on="did", how="inner")
-    mapping = {}
-    for r in joined.iter_rows(named=True):
-        h = r.get("handle")
-        if h:
-            mapping[h.lower()] = [float(r["avg_likes"]), float(r["avg_reposts"])]
-    write_json_lookup(mapping, SITE_PLOTS / "like-repost.lookup.json")
+    Binary (handles + positions) -- avoids a 14.5 MB JSON blob on the client."""
+    joined = (author_eng
+        .join(users_df.select(["did", "handle"]),
+              left_on="post_author_did", right_on="did", how="inner")
+        .filter(pl.col("handle").is_not_null())
+        .with_columns(pl.col("handle").str.to_lowercase()))
+    handles = joined["handle"].to_list()
+    xy = np.column_stack([
+        joined["avg_likes"].to_numpy().astype(np.float32),
+        joined["avg_reposts"].to_numpy().astype(np.float32),
+    ])
+    write_handles_bin(handles, SITE_PLOTS / "like-repost.handles.bin")
+    write_positions_bin(xy, SITE_PLOTS / "like-repost.positions.bin")
 
 
 # ===========================================================================

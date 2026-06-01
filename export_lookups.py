@@ -42,19 +42,25 @@ ew.export_activity(per_liker)
 ew.export_typical_popularity(per_liker)
 ew.export_leaderboards(per_liker, n=50)
 
-# --- like-repost: author_eng (copied from Plot 5) ---------------------------
-author_eng = (posts_df
-    .group_by("post_author_did")
-    .agg(
-        pl.col("like_count").mean().alias("avg_likes"),
-        pl.col("repost_count").mean().alias("avg_reposts"),
-        pl.len().alias("n_posts"),
-    )
-    .filter(pl.col("n_posts") >= 5)
-    .filter((pl.col("avg_likes") >= 1) & (pl.col("avg_reposts") >= 1)))
-ew.export_like_repost(author_eng, users_df)
+# --- ONE 20M-row groupby feeds both like-repost and punching ----------------
+# (Both the Plot 5 author_eng and the Plot 9/9.5 author frame group posts_df by
+# author; doing it once roughly halves the heavy work.)
+print("author aggregation (single groupby)...", flush=True)
+agg = posts_df.group_by("post_author_did").agg(
+    pl.col("like_count").mean().alias("avg_likes"),
+    pl.col("repost_count").mean().alias("avg_reposts"),
+    pl.col("like_count").sum().alias("total_likes"),
+    pl.len().alias("n_posts"),
+)
 
-# --- punching: top-4000 + highlighted authors (copied from Plot 9 / 9.5) ----
+# like-repost (Plot 5 axes/filters): post_author_did, avg_likes, avg_reposts
+author_eng = agg.filter(
+    (pl.col("n_posts") >= 5)
+    & (pl.col("avg_likes") >= 1) & (pl.col("avg_reposts") >= 1))
+ew.export_like_repost(author_eng, users_df)
+print("like-repost done", flush=True)
+
+# punching (Plot 9/9.5): top-4000 by total_likes + highlighted authors
 HIGHLIGHT_HANDLES = {
     "jcsalterego.bsky.social", "cee.wtf", "avikdey.bsky.social",
     "hankgreen.bsky.social", "ceej.online", "jefferyharrell.bsky.social",
@@ -66,17 +72,12 @@ HIGHLIGHT_HANDLES = {
     "hern.bsky.social", "10x.bsky.social", "zswitten.bsky.social",
     "dave.9000ish.uk", "phillipcarter.dev", "tszzl.bsky.social",
 }
-author_stats = (posts_df
-    .group_by("post_author_did")
-    .agg(pl.col("like_count").sum().alias("total_likes"), pl.len().alias("n_posts"))
+author_df_full = (agg
     .filter(pl.col("n_posts") >= 5)
     .join(users_df.select(["did", "handle", "followers_count"]),
-          left_on="post_author_did", right_on="did", how="inner"))
-author_df_full = author_stats.with_columns(
-    (pl.col("total_likes") / pl.col("n_posts")).alias("likes_per_post"),
-    (pl.col("total_likes") / pl.col("n_posts") / (pl.col("followers_count") + 1))
-        .alias("engagement_ratio"),
-).to_pandas()
+          left_on="post_author_did", right_on="did", how="inner")
+    .with_columns((pl.col("total_likes") / pl.col("n_posts")).alias("likes_per_post"))
+    .to_pandas())
 
 top4000 = author_df_full.nlargest(4000, "total_likes")
 highlighted = author_df_full[author_df_full["handle"].isin(HIGHLIGHT_HANDLES)]
@@ -84,5 +85,6 @@ missing = highlighted[~highlighted["handle"].isin(top4000["handle"].values)]
 author_df = (pd.concat([top4000, missing], ignore_index=True)
              if len(missing) else top4000)
 ew.export_punching(author_df)
+print("punching done", flush=True)
 
 print(f"\nLookups written -> {ew.SITE_PLOTS}", flush=True)

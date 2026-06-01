@@ -55,6 +55,10 @@ export const PLOTS: PlotConfig[] = [
     searchable: true,
     tabAnim: "hex-glow",
     highlight: "svg-point",
+    data: {
+      handles: "/plots/typical-popularity.handles.bin",
+      positions: "/plots/typical-popularity.positions.bin",
+    },
   },
   {
     id: "popularity-curve",
@@ -78,7 +82,10 @@ export const PLOTS: PlotConfig[] = [
     searchable: true,
     tabAnim: "hex-glow",
     highlight: "svg-point",
-    data: { lookup: "/plots/like-repost.lookup.json" },
+    data: {
+      handles: "/plots/like-repost.handles.bin",
+      positions: "/plots/like-repost.positions.bin",
+    },
   },
   {
     id: "leaderboards",
@@ -113,6 +120,10 @@ export const PLOTS: PlotConfig[] = [
     searchable: true,
     tabAnim: "spotlight-points",
     highlight: "deck-scatter",
+    data: {
+      handles: "/plots/activity.handles.bin",
+      positions: "/plots/activity.positions.bin",
+    },
   },
   {
     id: "punching",
@@ -124,6 +135,10 @@ export const PLOTS: PlotConfig[] = [
     searchable: true,
     tabAnim: "spotlight-points",
     highlight: "deck-scatter",
+    data: {
+      handles: "/plots/punching.handles.bin",
+      positions: "/plots/punching.positions.bin",
+    },
   },
   {
     id: "wakes-up",

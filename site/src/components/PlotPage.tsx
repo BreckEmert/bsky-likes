@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { PlotConfig } from "../plots.config.ts";
 import {
   containRect,
@@ -8,7 +8,7 @@ import {
 } from "../lib/coords.ts";
 import { useElementSize } from "../lib/useElementSize.ts";
 import { useBounds } from "../lib/useBounds.ts";
-import { useLookup } from "../lib/useLookup.ts";
+import { usePointData } from "../lib/usePointData.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { SvgPoint } from "./highlights/SvgPoint.tsx";
 
@@ -33,11 +33,9 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   const [stageRef, stageSize] = useElementSize<HTMLDivElement>();
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const bounds = useBounds(plot.bounds);
-  // JSON point-lookup for svg-point plots (e.g. like-repost). Other highlight
-  // strategies (binary svg-point, deck, list) load their data in later steps.
-  const lookup = useLookup(
-    plot.highlight === "svg-point" ? plot.data?.lookup : undefined
-  );
+  // Binary point data (handles + positions) for every searchable point plot
+  // (svg-point and deck-scatter). One loader, one contract.
+  const points = usePointData(plot.data?.handles, plot.data?.positions);
 
   useEffect(() => setNatural(null), [plot.id]);
 
@@ -48,10 +46,9 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   const effBounds: Bounds | null =
     bounds ?? (natural ? identityBounds(natural.w, natural.h) : null);
 
-  const handleIndex = useMemo(
-    () => (lookup ? Object.keys(lookup) : []),
-    [lookup]
-  );
+  const handleIndex = points ? points.handles : [];
+  const selectedPoint =
+    points && selectedHandle ? points.get(selectedHandle) ?? null : null;
 
   const dp = debugPoint();
   const crosshair =
@@ -64,12 +61,9 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
         )
       : null;
 
-  // Is the selected handle absent from this plot's lookup?
+  // Is the selected handle absent from this plot's data?
   const notHere =
-    !!selectedHandle &&
-    plot.searchable &&
-    lookup !== null &&
-    !lookup[selectedHandle.toLowerCase()];
+    !!selectedHandle && plot.searchable && points !== null && !selectedPoint;
 
   return (
     <main className="plotpage">
@@ -131,7 +125,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
             {plot.highlight === "svg-point" && (
               <SvgPoint
                 handle={selectedHandle}
-                lookup={lookup}
+                point={selectedPoint}
                 bounds={bounds}
                 imgRect={imgRect}
               />
