@@ -70,6 +70,7 @@ def fetch_bios(hs):
 sub_id = 0
 regions = []
 bios_out = []
+all_did = []; all_h = []; all_sub = []   # per-user sub assignment (for likee join)
 for t in topics:
     sub = mem.filter(pl.col("topic") == t)
     sdids = sub["liker_did"].to_list(); shandles = sub["handle"].to_list()
@@ -80,6 +81,7 @@ for t in topics:
         m = lab == c
         cdids = [sdids[i] for i in np.where(m)[0]]
         chandles = [shandles[i] for i in np.where(m)[0]]
+        all_did += cdids; all_h += chandles; all_sub += [sub_id] * len(cdids)
         pts = np.array([cmap[d] for d in cdids if d in cmap])
         pick = [chandles[i] for i in rng.choice(len(chandles),
                 size=min(TOPIC_SAMPLE, len(chandles)), replace=False) if chandles[i]]
@@ -99,6 +101,8 @@ for b in bios_out:
 for r in regions:
     del r["sample"]
 
+pl.DataFrame({"liker_did": all_did, "handle": all_h, "sub": all_sub}).write_parquet(
+    config.PROJECT_DIR / "cluster_members_sub.parquet")
 SUB_RAW.write_text(json.dumps(regions), encoding="utf-8")
 SUB_BIOS.write_text(json.dumps(bios_out, ensure_ascii=False), encoding="utf-8")
 print(f"[OK] {SUB_RAW.name} + {SUB_BIOS.name} ({sub_id} subs, {time.time()-t0:.1f}s)", flush=True)

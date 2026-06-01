@@ -45,7 +45,10 @@ LANG_SAMPLE = 18      # bios sampled per fine cluster for language detection
 # seed's fine-grained cluster (the island), unless it lands in a large cluster
 # (i.e. it's actually English-core-embedded -> skip, don't nuke the core).
 SEED_ISLANDS = ["wickedwookie.bsky.social", "egbertl.bsky.social",
-                "crbelottilm.bsky.social", "hunosp.bsky.social", "lukree.bsky.social"]
+                "crbelottilm.bsky.social", "hunosp.bsky.social", "lukree.bsky.social",
+                "ernovanhala.bsky.social", "bohse.eurosky.social", "meldalm.bsky.social",
+                "crocodyllul.bsky.social", "uansetsaa.bsky.social", "wscherphof.bsky.social",
+                "daffyduke.bsky.social", "radiotystnad.bsky.social"]
 SEED_ISLAND_MAXSIZE = 2500   # only treat a seed's cluster as an island if <= this
 TOPIC_K = 10          # topical clusters among English users
 TOPIC_SAMPLE = 30     # bios sampled per topical cluster for naming
