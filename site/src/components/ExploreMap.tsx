@@ -64,21 +64,26 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     const liveZoom = viewStateRef.current?.zoom ?? viewState.zoom;
     const dest: VS = {
       target: [data.points[2 * i], data.points[2 * i + 1], 0],
-      zoom: Math.max(liveZoom, initialZoom.current + ZOOM_SPAN),
+      // Gentle: only zoom IN to ~60% if we're more zoomed out than that; if the
+      // user is already zoomed in, just pan (keep their zoom). No slam-to-max.
+      zoom: Math.max(liveZoom, initialZoom.current + ZOOM_SPAN * 0.6),
     };
     flyingRef.current = true;
     setViewState({
       ...dest,
-      transitionDuration: 800,
+      transitionDuration: 750,
       transitionInterpolator: new LinearInterpolator(["target", "zoom"]),
-      // When the fly ends, commit a clean (transition-free) state and re-enable
-      // normal echo/clamp. Echoing deck's interpolated state mid-fly caused the
-      // overshoot ("jump right, pan back"), so we suppress it while flying.
+      // Cubic ease-in-out -> a smooth bezier-ish glide from where the camera is
+      // now straight to the target (no relocate, no overshoot).
+      transitionEasing: (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
       onTransitionEnd: () => {
         flyingRef.current = false;
         setViewState(dest);
       },
     } as never);
+    // Safety: clear the flag even if the transition is interrupted.
+    window.setTimeout(() => (flyingRef.current = false), 900);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHandle, data]);
 
@@ -211,11 +216,11 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
           onViewStateChange={((e: { viewState: VS }) => {
             const vs = e.viewState;
             viewStateRef.current = vs;
-            // During a fly-to, let deck run its own interpolation untouched --
-            // echoing the interpolated state back (and clamping it) fights the
-            // interpolator and causes the overshoot/jump.
-            if (flyingRef.current) return;
-            if (data) {
+            // Clamp panning to (padded) bounds -- but NOT mid-fly: clamping the
+            // interpolating target is what fought the interpolator and caused
+            // the overshoot. During a fly we echo deck's frames untouched (keeps
+            // the LOD/zoom following smoothly), and clamp only on user panning.
+            if (data && !flyingRef.current) {
               const b = data.bounds;
               const px = (b.xMax - b.xMin) * 0.06;
               const py = (b.yMax - b.yMin) * 0.06;
