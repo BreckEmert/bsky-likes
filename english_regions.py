@@ -48,7 +48,9 @@ SEED_ISLANDS = ["wickedwookie.bsky.social", "egbertl.bsky.social",
                 "crbelottilm.bsky.social", "hunosp.bsky.social", "lukree.bsky.social",
                 "ernovanhala.bsky.social", "bohse.eurosky.social", "meldalm.bsky.social",
                 "crocodyllul.bsky.social", "uansetsaa.bsky.social", "wscherphof.bsky.social",
-                "daffyduke.bsky.social", "radiotystnad.bsky.social"]
+                "daffyduke.bsky.social", "radiotystnad.bsky.social",
+                "meerbeteralles.bsky.social", "fimohokon.bsky.social", "gusyd.bsky.social",
+                "jetpac.bsky.social", "mrmarkvard.bsky.social", "anulallukka.bsky.social"]
 SEED_ISLAND_MAXSIZE = 2500   # only treat a seed's cluster as an island if <= this
 TOPIC_K = 10          # topical clusters among English users
 TOPIC_SAMPLE = 30     # bios sampled per topical cluster for naming
