@@ -75,9 +75,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const pointRadius = clamp(0.35 + 0.45 * zoomDelta, 0.35, 4.5);
   const zoomPct = Math.round((zoomDelta / ZOOM_SPAN) * 100);
   // Density-color background: full until ~15% zoom, then linear out to nothing
-  // by ~55% (so ~70% opacity at 27%, ~50% at 37%, ~25% at 46%), leaving dots.
+  // by ~50% (so ~62% at 27%, ~35% at 37%, ~11% at 46%), leaving just the dots.
   const FADE_START_PCT = 15;
-  const FADE_END_PCT = 55;
+  const FADE_END_PCT = 50;
   const bgOpacity =
     clamp((FADE_END_PCT - zoomPct) / (FADE_END_PCT - FADE_START_PCT), 0, 1) * 0.95;
 

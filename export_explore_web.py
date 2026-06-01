@@ -93,7 +93,7 @@ cell_cnt = np.empty(n, dtype=np.int64); cell_cnt[orig] = cnt
 #   1 -> proportional to cell density (full clustering, matches color field)
 # A small ALPHA pulls a few extra points into dense cells and fewer into sparse
 # cells for any LOD prefix, so the layer reads less uniform / more clustered.
-ALPHA = 0.4
+ALPHA = 0.6
 key = (ranks + 0.5) / np.power(cell_cnt, ALPHA)
 # primary: biased key asc; secondary: density desc (cores first within ties)
 order = np.lexsort((-pt_density, key))
