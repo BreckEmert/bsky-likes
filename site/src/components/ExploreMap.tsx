@@ -17,9 +17,13 @@ interface VS {
   zoom: number;
 }
 
-// LOD: render only the first N points (sorted by followers) when zoomed out,
-// 4x more per zoom level — all from one GPU buffer (Theo's snappy pattern).
-const LOD_BASE = 40000;
+// LOD: at the overview show only the most-prominent N points (sorted by
+// followers); reveal ~2.4x more per zoom level from one GPU buffer (Theo's
+// snappy pattern). Lower base + gentler ramp = the reveal is clearly visible
+// across the whole zoom range.
+const LOD_BASE = 12000;
+const LOD_GROWTH = 2.4;
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const data = useExploreData();
@@ -27,6 +31,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const [viewState, setViewState] = useState<VS | null>(null);
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const initialZoom = useRef(0);
+  const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
 
   // Fit the whole field once data + container size are known.
   useEffect(() => {
@@ -35,6 +40,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     const z =
       Math.log2(Math.min(size.width / (xMax - xMin), size.height / (yMax - yMin))) - 0.2;
     initialZoom.current = z;
+    // Cap zoom so users can't get lost: barely out past the fit, deep but bounded in.
+    setZoomRange({ min: z - 0.6, max: z + 9 });
     setViewState({ target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: z });
   }, [data, size, viewState]);
 
@@ -53,11 +60,14 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHandle, data]);
 
+  const zoomDelta = viewState ? Math.max(0, viewState.zoom - initialZoom.current) : 0;
   const numVisible = useMemo(() => {
     if (!data || !viewState) return 0;
-    const d = Math.max(0, viewState.zoom - initialZoom.current);
-    return Math.min(data.n, Math.round(LOD_BASE * Math.pow(4, d)));
-  }, [data, viewState]);
+    return Math.min(data.n, Math.round(LOD_BASE * Math.pow(LOD_GROWTH, zoomDelta)));
+  }, [data, viewState, zoomDelta]);
+  // Bigger dots at the overview (few, bold prominent accounts), smaller as the
+  // field fills in on zoom — makes the LOD reveal read clearly.
+  const pointRadius = clamp(3.0 - 0.28 * zoomDelta, 1.1, 3.0);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -71,13 +81,14 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
             getFillColor: { value: data.colors, size: 3 },
           },
         },
-        getRadius: 1.6,
+        getRadius: pointRadius,
         radiusUnits: "pixels",
         radiusMinPixels: 1,
         opacity: 0.72,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 220],
+        updateTriggers: { getRadius: [pointRadius] },
       }),
     ];
     const sel = selectedHandle?.toLowerCase();
@@ -101,16 +112,35 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle]);
+  }, [data, numVisible, selectedHandle, pointRadius]);
 
   return (
     <div className="exploremap" ref={ref}>
       {viewState && (
         <DeckGL
           views={new OrthographicView({})}
-          controller={true}
+          controller={
+            (zoomRange
+              ? { minZoom: zoomRange.min, maxZoom: zoomRange.max }
+              : true) as never
+          }
           viewState={viewState as never}
-          onViewStateChange={(e: { viewState: unknown }) => setViewState(e.viewState as VS)}
+          onViewStateChange={((e: { viewState: VS }) => {
+            // Clamp panning to (padded) data bounds so users can't drift into
+            // the void; the controller already clamps zoom to min/max.
+            const vs = e.viewState;
+            if (data) {
+              const b = data.bounds;
+              const px = (b.xMax - b.xMin) * 0.06;
+              const py = (b.yMax - b.yMin) * 0.06;
+              vs.target = [
+                clamp(vs.target[0], b.xMin - px, b.xMax + px),
+                clamp(vs.target[1], b.yMin - py, b.yMax + py),
+                0,
+              ];
+            }
+            setViewState(vs);
+          }) as never}
           layers={layers as never}
           onHover={(info: { index: number; x: number; y: number }) => {
             if (data && info.index >= 0)
