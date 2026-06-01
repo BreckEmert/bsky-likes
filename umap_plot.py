@@ -38,8 +38,9 @@ def el():
 
 print("[1] loading coords + followers...", flush=True)
 df = pl.read_parquet(COORDS)
-users = pl.read_parquet(config.USERS_PATH, columns=["handle", "followers_count"])
-df = df.join(users, on="handle", how="left")
+# Join on DID (unique) — users.parquet has duplicate handles which would fan out.
+users = pl.read_parquet(config.USERS_PATH, columns=["did", "followers_count"]).unique("did")
+df = df.join(users, left_on="liker_did", right_on="did", how="left")
 xy = np.column_stack([df["x"].to_numpy(), df["y"].to_numpy()]).astype(np.float64)
 print(f"    {len(df):,} users ({el()})", flush=True)
 
