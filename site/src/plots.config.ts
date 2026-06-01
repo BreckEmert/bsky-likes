@@ -78,6 +78,7 @@ export const PLOTS: PlotConfig[] = [
     searchable: true,
     tabAnim: "hex-glow",
     highlight: "svg-point",
+    data: { lookup: "/plots/like-repost.lookup.json" },
   },
   {
     id: "leaderboards",

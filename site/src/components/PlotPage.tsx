@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PlotConfig } from "../plots.config.ts";
 import {
   containRect,
@@ -8,6 +8,9 @@ import {
 } from "../lib/coords.ts";
 import { useElementSize } from "../lib/useElementSize.ts";
 import { useBounds } from "../lib/useBounds.ts";
+import { useLookup } from "../lib/useLookup.ts";
+import { SearchBox } from "./SearchBox.tsx";
+import { SvgPoint } from "./highlights/SvgPoint.tsx";
 
 interface Props {
   plot: PlotConfig;
@@ -15,9 +18,8 @@ interface Props {
   onSelectHandle: (h: string | null) => void;
 }
 
-// Debug overlay toggled by URL: "?debug" shows the image rect + a center
-// crosshair; "?debug=X,Y" places the crosshair at data point (X, Y). Used to
-// verify data->pixel alignment against a known point in a PNG (build step 2).
+// "?debug" shows the image rect + a center crosshair; "?debug=X,Y" places it at
+// data point (X, Y) — used to verify data->pixel alignment against a known point.
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has("debug");
 function debugPoint(): { x: number; y: number } | null {
@@ -27,22 +29,29 @@ function debugPoint(): { x: number; y: number } | null {
   return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
 }
 
-export function PlotPage({ plot }: Props) {
+export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   const [stageRef, stageSize] = useElementSize<HTMLDivElement>();
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const bounds = useBounds(plot.bounds);
+  // JSON point-lookup for svg-point plots (e.g. like-repost). Other highlight
+  // strategies (binary svg-point, deck, list) load their data in later steps.
+  const lookup = useLookup(
+    plot.highlight === "svg-point" ? plot.data?.lookup : undefined
+  );
 
-  // Reset measured natural size when the plot (and thus the image) changes.
   useEffect(() => setNatural(null), [plot.id]);
 
   const imgRect = natural
     ? containRect(stageSize.width, stageSize.height, natural.w, natural.h)
     : null;
 
-  // Real bounds.json once exported; identity fallback meanwhile so the overlay
-  // plumbing is verifiable before the real PNGs/bounds exist.
   const effBounds: Bounds | null =
     bounds ?? (natural ? identityBounds(natural.w, natural.h) : null);
+
+  const handleIndex = useMemo(
+    () => (lookup ? Object.keys(lookup) : []),
+    [lookup]
+  );
 
   const dp = debugPoint();
   const crosshair =
@@ -54,6 +63,13 @@ export function PlotPage({ plot }: Props) {
           dp ? dp.y : (effBounds.yMin + effBounds.yMax) / 2
         )
       : null;
+
+  // Is the selected handle absent from this plot's lookup?
+  const notHere =
+    !!selectedHandle &&
+    plot.searchable &&
+    lookup !== null &&
+    !lookup[selectedHandle.toLowerCase()];
 
   return (
     <main className="plotpage">
@@ -71,6 +87,21 @@ export function PlotPage({ plot }: Props) {
       </header>
 
       <div className="plotpage__stage" ref={stageRef}>
+        {plot.searchable && (
+          <div className="plotpage__search">
+            <SearchBox
+              index={handleIndex}
+              selected={selectedHandle}
+              onSelect={onSelectHandle}
+            />
+            {notHere && (
+              <div className="plotpage__nothere">
+                @{selectedHandle} isn’t on this plot
+              </div>
+            )}
+          </div>
+        )}
+
         {plot.image ? (
           <img
             key={plot.id}
@@ -87,20 +118,24 @@ export function PlotPage({ plot }: Props) {
           />
         ) : (
           <div className="plotpage__placeholder">
-            {/* HTML-only plot (e.g. leaderboards): no PNG. Real content (ranked
-                lists / deck layers) is added in a later build step. */}
             <span>{plot.tabLabel} — built in a later step</span>
           </div>
         )}
 
-        {/* Overlay: matches the displayed image rect; highlight layers (SVG /
-            deck.gl) mount here in later steps. For now: optional debug aids. */}
         {imgRect && (
           <svg
             className="plotpage__overlay"
             width={stageSize.width}
             height={stageSize.height}
           >
+            {plot.highlight === "svg-point" && (
+              <SvgPoint
+                handle={selectedHandle}
+                lookup={lookup}
+                bounds={bounds}
+                imgRect={imgRect}
+              />
+            )}
             {DEBUG && (
               <rect
                 x={imgRect.left}

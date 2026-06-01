@@ -120,6 +120,91 @@ body {
   pointer-events: none;
 }
 
+/* ---- Search box (top-left over the plot) ---- */
+.plotpage__search {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 5;
+  width: 280px;
+  max-width: 70%;
+}
+
+.searchbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchbox__input {
+  width: 100%;
+  padding: 8px 28px 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(17, 21, 27, 0.92);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+  outline: none;
+}
+.searchbox__input:focus { border-color: var(--accent); }
+
+.searchbox__clear {
+  position: absolute;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-size: 14px;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.searchbox__clear:hover { color: var(--text); }
+
+.searchbox__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  background: rgba(17, 21, 27, 0.98);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.searchbox__item {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.searchbox__item.is-active,
+.searchbox__item:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.plotpage__nothere {
+  margin-top: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(17, 21, 27, 0.92);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+  display: inline-block;
+}
+
 .plotpage__placeholder {
   display: flex;
   align-items: center;
