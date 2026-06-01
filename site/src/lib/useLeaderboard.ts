@@ -9,24 +9,68 @@ export interface LeaderboardData {
   mostObscure: LeaderRow[]; // lowest (likes the most obscure)
   metric: string;
   total: number;
+  /** every eligible handle, ranked desc (for search) */
+  allHandles: string[];
+  /** rank (1 = most viral) + value for any eligible handle, else null */
+  rankOf(handle: string): { rank: number; value: number } | null;
 }
 
-/** Fetch leaderboards.json (ranked top/bottom rows). */
-export function useLeaderboard(url: string | undefined): LeaderboardData | null {
+function parseHandles(buf: ArrayBuffer): string[] {
+  const dv = new DataView(buf);
+  const count = dv.getUint32(0, true);
+  const offsets = new Uint32Array(buf, 4, count + 1);
+  const start = 4 + (count + 1) * 4;
+  const u8 = new Uint8Array(buf);
+  const dec = new TextDecoder();
+  const out = new Array<string>(count);
+  for (let i = 0; i < count; i++)
+    out[i] = dec.decode(u8.subarray(start + offsets[i], start + offsets[i + 1]));
+  return out;
+}
+
+/** Fetch leaderboards.json (the two columns) + the full ranked lookup. */
+export function useLeaderboard(urls: {
+  rows?: string;
+  handles?: string;
+  values?: string;
+} | undefined): LeaderboardData | null {
   const [data, setData] = useState<LeaderboardData | null>(null);
+  const rowsUrl = urls?.rows;
+  const handlesUrl = urls?.handles;
+  const valuesUrl = urls?.values;
+
   useEffect(() => {
     setData(null);
-    if (!url) return;
+    if (!rowsUrl || !handlesUrl || !valuesUrl) return;
     let cancelled = false;
-    fetch(url)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!cancelled) setData(j as LeaderboardData | null);
+    Promise.all([
+      fetch(rowsUrl).then((r) => r.json()),
+      fetch(handlesUrl).then((r) => r.arrayBuffer()),
+      fetch(valuesUrl).then((r) => r.arrayBuffer()),
+    ])
+      .then(([j, hb, vb]) => {
+        if (cancelled) return;
+        const allHandles = parseHandles(hb);
+        const values = new Float32Array(vb);
+        const index = new Map<string, number>();
+        for (let i = 0; i < allHandles.length; i++) index.set(allHandles[i], i);
+        setData({
+          mostMainstream: j.mostMainstream,
+          mostObscure: j.mostObscure,
+          metric: j.metric,
+          total: j.total,
+          allHandles,
+          rankOf(handle: string) {
+            const i = index.get(handle.toLowerCase());
+            return i === undefined ? null : { rank: i + 1, value: values[i] };
+          },
+        });
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [rowsUrl, handlesUrl, valuesUrl]);
+
   return data;
 }

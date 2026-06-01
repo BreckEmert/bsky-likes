@@ -35,16 +35,6 @@ export interface PlotConfig {
 // transparent export PNGs from bsky_export_web.py. Leaderboards is HTML-only.
 export const PLOTS: PlotConfig[] = [
   {
-    id: "long-tail",
-    tabLabel: "Attention Inequality",
-    title: "How unequal is attention on Bluesky?",
-    subtitle: null,
-    image: "/plots/long-tail.png",
-    searchable: false,
-    tabAnim: "draw-curve",
-    highlight: null,
-  },
-  {
     id: "typical-popularity",
     tabLabel: "Typical Popularity",
     title: "What's the typical popularity of posts you like?",
@@ -101,7 +91,11 @@ export const PLOTS: PlotConfig[] = [
     searchable: true,
     tabAnim: "rising-bars",
     highlight: "list-row",
-    data: { rows: "/plots/leaderboards.json" },
+    data: {
+      rows: "/plots/leaderboards.json",
+      handles: "/plots/leaderboards.handles.bin",
+      values: "/plots/leaderboards.values.bin",
+    },
   },
   {
     id: "half-life",
@@ -154,6 +148,17 @@ export const PLOTS: PlotConfig[] = [
     image: "/plots/wakes-up.png",
     searchable: false,
     tabAnim: "pulse-grid",
+    highlight: null,
+  },
+  {
+    // Non-searchable (no per-user selection) — placed last to match plots.py.
+    id: "long-tail",
+    tabLabel: "Attention Inequality",
+    title: "How unequal is attention on Bluesky?",
+    subtitle: null,
+    image: "/plots/long-tail.png",
+    searchable: false,
+    tabAnim: "draw-curve",
     highlight: null,
   },
 ];

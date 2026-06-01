@@ -234,66 +234,7 @@ print(f"Users:        {len(users_df):,} rows")
 per_liker = pl.read_parquet(PROJECT_DIR / "per_liker.parquet")
 
 
-# %% PLOT 1 — The Long Tail (Bluesky's power law)
-likes_desc = posts_df["like_count"].sort(descending=True).to_numpy()
-total = int(likes_desc.sum())
-n = len(likes_desc)
-print(f"Posts:          {n:,}")
-print(f"Total likes:    {total:,}")
-print(f"Top 0.1%:       {likes_desc[:n//1000].sum() / total:.1%} of likes")
-print(f"Top 1%:         {likes_desc[:n//100].sum()  / total:.1%} of likes")
-print(f"Top 10%:        {likes_desc[:n//10].sum()   / total:.1%} of likes")
-print(f"Bottom 50%:     {likes_desc[n//2:].sum()    / total:.1%} of likes")
-print(f"Median post:    {likes_desc[n//2]} likes")
-print(f"Posts w/ 0 likes:  {(likes_desc == 0).sum():,}  ({(likes_desc == 0).mean():.1%})")
-print(f"Posts w/ ≤1 likes: {(likes_desc <= 1).sum():,} ({(likes_desc <= 1).mean():.1%})")
-print(f"Top post:       {int(likes_desc[0]):,} likes")
-print(f"Top post vs sum of ranks 1000-10000: {likes_desc[0] / likes_desc[1000:10000].sum():.3f}")
-
-# Ascending for Lorenz / Gini (Brown formula expects ascending)
-likes_asc = likes_desc[::-1].astype(np.float64)
-cum = likes_asc.cumsum()
-gini = (n + 1 - 2 * (cum.sum() / cum[-1])) / n
-print(f"Gini coefficient: {gini:.3f}  (US wealth ≈ 0.85)")
-
-x_bluesky = np.arange(1, n + 1) / n
-y_bluesky = cum / cum[-1]
-
-# Reference curves: parametric Lorenz approximation L(p) = p^k where
-# k controls inequality. Higher k = more unequal. These are illustrative,
-# not exact survey data — useful for visual intuition only.
-p = np.linspace(0, 1, 500)
-def lorenz_powerlaw(p, gini):
-    # closed-form for L(p) = p^a, where gini = (a-1)/(a+1) -> a = (1+gini)/(1-gini)
-    a = (1 + gini) / (1 - gini)
-    return p ** a
-
-fig, ax = plt.subplots(figsize=(7, 7))
-ax.plot([0, 1], [0, 1], "--", color="#9aa4b1", alpha=0.5, label="perfect equality")
-ax.plot(p, lorenz_powerlaw(p, 0.48), color="#10b981", linewidth=2,
-        label="US income (Gini ≈ 0.48)")
-ax.plot(p, lorenz_powerlaw(p, 0.85), color="#f59e0b", linewidth=2,
-        label="US wealth (Gini ≈ 0.85)")
-ax.plot(x_bluesky, y_bluesky, color="#1d9bf0", linewidth=3,
-        label=f"Bluesky likes (Gini = {gini:.3f})", zorder=10)
-
-ax.set_xlabel("Bottom X% of posts (least-liked → most-liked)")
-ax.set_ylabel("Share of total likes they receive")
-ax.set_title("How unequal is attention on Bluesky?")
-ax.set_aspect("equal", adjustable="box")
-ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-ax.legend(facecolor="#1f2933", edgecolor="none", loc="upper left")
-# in-graph quote — middle-left
-ax.text(0.03, 0.5,
-        '"Greed, for lack of a better word, is good."\n— Gordon Gekko, Wall Street',
-        transform=ax.transAxes, ha="left", va="center", **QUOTE_STYLE)
-if WEB_EXPORT:
-    ew.export_png_and_bounds(fig, ax, "long-tail", x_log=False, y_log=False)
-plt.show()
-plt.close('all')  # free figure memory from the previous cell
-
-
-# %% PLOT 2 — The Hipster Index
+# %% PLOT 1 — The Hipster Index
 # Each user is a dot.  X/Y = median/mean like-count of posts they like.
 print("\n[2/10] The Hipster Index")
 sub = (per_liker
@@ -425,7 +366,7 @@ plt.close('all')  # free figure memory from the previous cell
 print(f"  used {len(hist):,} users")
 
 
-# %% PLOT 5 — Like-Repost Manifold
+# %% PLOT 3 — Like-Repost Manifold
 # 2D density of (avg likes per post, avg reposts per post) across all authors.
 print("\n[5/10] Like-Repost Manifold (per author)")
 author_eng = (posts_df
@@ -477,7 +418,7 @@ plt.show()
 plt.close('all')
 
 
-# %% PLOT 6 — Mainstream vs Hipster Leaderboards
+# %% PLOT 4 — Mainstream vs Hipster Leaderboards
 # Two side-by-side bar charts: most-mainstream and most-hipster users (n>=50).
 print("\n[6/10] Mainstream vs Hipster Leaderboards")
 sub = per_liker.filter(pl.col("n_likes") >= 50)
@@ -491,11 +432,17 @@ for ax, df_, color, descr in [
     (axes[1], top_main, BSKY_GOLD,  "likes the most viral posts"),
 ]:
     y = np.arange(len(df_))
-    ax.barh(y, df_["mean_log_popularity"].values, color=color, edgecolor="none")
+    vals = df_["mean_log_popularity"].values
+    ax.barh(y, vals, color=color, edgecolor="none")
     labels = [f"@{h}" if h else df_['liker_did'].iloc[i][:24] + "…"
               for i, h in enumerate(df_["handle"])]
     ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=9)
     ax.invert_yaxis()
+    # Scale x to THIS column's value range so the spread is visible (otherwise
+    # every bar fills nearly the whole axis).
+    lo, hi = float(vals.min()), float(vals.max())
+    pad = (hi - lo) * 0.04 or 0.1
+    ax.set_xlim(lo - pad, hi + pad)
     ax.set_xlabel("Mean log(post likes + 1)")
     ax.set_title(descr)
     ax.spines["top"].set_visible(False)
@@ -508,7 +455,7 @@ plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
 
-# %% PLOT 7 — Engagement Half-Life
+# %% PLOT 5 — Engagement Half-Life
 # For every like, age_at_like = like_created_at - post_created_at.
 print("\n[7/10] Engagement Half-Life")
 
@@ -574,7 +521,7 @@ plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
 
-# %% PLOT 8 — Activity vs Mainstreaminess
+# %% PLOT 6 — Activity vs Mainstreaminess
 # Each user: their own popularity (X) vs popularity of posts they like (Y).
 sub = (per_liker
        .filter(pl.col("n_likes") >= 20)
@@ -633,7 +580,7 @@ plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
 
-# %% PLOT 9 — Punching Above Their Weight
+# %% PLOT 7 — Punching Above Their Weight
 # For top authors: scatter of follower_count vs likes-per-post.
 print("\n[9/10] Punching Above Their Weight")
 
@@ -687,7 +634,7 @@ plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
 
-# %% PLOT 9.5 — Highlight a custom set of users (gold)
+# %% PLOT 7.5 — Highlight a custom set of users (gold)
 # (reuses author_df from previous)
 HIGHLIGHT_HANDLES = {
     "jcsalterego.bsky.social",
@@ -808,7 +755,7 @@ plt.show()
 plt.close('all')
 
 
-# %% PLOT 10 — When Bluesky Wakes Up
+# %% PLOT 8 — When Bluesky Wakes Up
 # Day-of-week × hour-of-day heatmap of like activity.
 # Per-user whole-week trim: for EACH user, keep only likes that fall within
 # complete Mon–Sun weeks of their own captured span (first Monday on/after their
@@ -876,6 +823,65 @@ plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
 print(f"\nAll plots saved to {PLOTS_DIR}")
+
+
+# %% PLOT 9 — The Long Tail (Bluesky's power law)
+likes_desc = posts_df["like_count"].sort(descending=True).to_numpy()
+total = int(likes_desc.sum())
+n = len(likes_desc)
+print(f"Posts:          {n:,}")
+print(f"Total likes:    {total:,}")
+print(f"Top 0.1%:       {likes_desc[:n//1000].sum() / total:.1%} of likes")
+print(f"Top 1%:         {likes_desc[:n//100].sum()  / total:.1%} of likes")
+print(f"Top 10%:        {likes_desc[:n//10].sum()   / total:.1%} of likes")
+print(f"Bottom 50%:     {likes_desc[n//2:].sum()    / total:.1%} of likes")
+print(f"Median post:    {likes_desc[n//2]} likes")
+print(f"Posts w/ 0 likes:  {(likes_desc == 0).sum():,}  ({(likes_desc == 0).mean():.1%})")
+print(f"Posts w/ ≤1 likes: {(likes_desc <= 1).sum():,} ({(likes_desc <= 1).mean():.1%})")
+print(f"Top post:       {int(likes_desc[0]):,} likes")
+print(f"Top post vs sum of ranks 1000-10000: {likes_desc[0] / likes_desc[1000:10000].sum():.3f}")
+
+# Ascending for Lorenz / Gini (Brown formula expects ascending)
+likes_asc = likes_desc[::-1].astype(np.float64)
+cum = likes_asc.cumsum()
+gini = (n + 1 - 2 * (cum.sum() / cum[-1])) / n
+print(f"Gini coefficient: {gini:.3f}  (US wealth ≈ 0.85)")
+
+x_bluesky = np.arange(1, n + 1) / n
+y_bluesky = cum / cum[-1]
+
+# Reference curves: parametric Lorenz approximation L(p) = p^k where
+# k controls inequality. Higher k = more unequal. These are illustrative,
+# not exact survey data — useful for visual intuition only.
+p = np.linspace(0, 1, 500)
+def lorenz_powerlaw(p, gini):
+    # closed-form for L(p) = p^a, where gini = (a-1)/(a+1) -> a = (1+gini)/(1-gini)
+    a = (1 + gini) / (1 - gini)
+    return p ** a
+
+fig, ax = plt.subplots(figsize=(7, 7))
+ax.plot([0, 1], [0, 1], "--", color="#9aa4b1", alpha=0.5, label="perfect equality")
+ax.plot(p, lorenz_powerlaw(p, 0.48), color="#10b981", linewidth=2,
+        label="US income (Gini ≈ 0.48)")
+ax.plot(p, lorenz_powerlaw(p, 0.85), color="#f59e0b", linewidth=2,
+        label="US wealth (Gini ≈ 0.85)")
+ax.plot(x_bluesky, y_bluesky, color="#1d9bf0", linewidth=3,
+        label=f"Bluesky likes (Gini = {gini:.3f})", zorder=10)
+
+ax.set_xlabel("Bottom X% of posts (least-liked → most-liked)")
+ax.set_ylabel("Share of total likes they receive")
+ax.set_title("How unequal is attention on Bluesky?")
+ax.set_aspect("equal", adjustable="box")
+ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+ax.legend(facecolor="#1f2933", edgecolor="none", loc="upper left")
+# in-graph quote — middle-left
+ax.text(0.03, 0.5,
+        '"Greed, for lack of a better word, is good."\n— Gordon Gekko, Wall Street',
+        transform=ax.transAxes, ha="left", va="center", **QUOTE_STYLE)
+if WEB_EXPORT:
+    ew.export_png_and_bounds(fig, ax, "long-tail", x_log=False, y_log=False)
+plt.show()
+plt.close('all')  # free figure memory from the previous cell
 
 
 # %% WEB EXPORT — per-handle lookups (only when WEB_EXPORT=1)

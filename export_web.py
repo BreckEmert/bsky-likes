@@ -163,15 +163,23 @@ def export_typical_popularity(per_liker):
     write_positions_bin(xy, SITE_PLOTS / "typical-popularity.positions.bin")
 
 
-def export_leaderboards(per_liker, n=50):
-    """Plot 6 / 'leaderboards'. Top-n and bottom-n by mean_log_popularity.
-    JSON ordered rows; the site shows these and 'ranked #X of N' for others."""
+def export_leaderboards(per_liker, n=50, min_likes=50):
+    """Plot 6 / 'leaderboards'. Ranked by mean_log_popularity over users with
+    >= min_likes likes (without that filter the extremes are degenerate: someone
+    who liked a single viral/obscure post outranks everyone, and the values tie
+    at the boundaries). Emits:
+      leaderboards.json        top-n + bottom-n rows for the two columns
+      leaderboards.handles.bin full ranked handles (desc), for search-any-user
+      leaderboards.values.bin  parallel Float32 metric values
+    so the site can search ANY eligible user and show 'ranked #X of N'."""
     metric = "mean_log_popularity"
     df = (per_liker
-          .filter(pl.col(metric).is_not_null() & pl.col("handle").is_not_null())
-          .sort(metric))
-    bottom = df.head(n).select(["handle", metric])
-    top = df.tail(n).reverse().select(["handle", metric])
+          .filter(pl.col(metric).is_not_null() & pl.col("handle").is_not_null()
+                  & (pl.col("n_likes") >= min_likes))
+          .sort(metric, descending=True))   # highest (most viral) first
+    total = df.height
+    top = df.head(n).select(["handle", metric])             # most viral
+    bottom = df.tail(n).reverse().select(["handle", metric])  # most obscure, lowest first
 
     def rows(frame):
         return [{"handle": h, "value": float(v)}
@@ -179,8 +187,14 @@ def export_leaderboards(per_liker, n=50):
                                 frame[metric].to_list())]
 
     payload = {"mostMainstream": rows(top), "mostObscure": rows(bottom),
-               "metric": metric, "total": df.height}
+               "metric": metric, "total": total}
     write_json_lookup(payload, SITE_PLOTS / "leaderboards.json")
+
+    # Full ranked lookup (sorted desc -> rank = index + 1) for search-any-user.
+    handles = [h.lower() for h in df["handle"].to_list()]
+    write_handles_bin(handles, SITE_PLOTS / "leaderboards.handles.bin")
+    df[metric].to_numpy().astype(np.float32).tofile(SITE_PLOTS / "leaderboards.values.bin")
+    print(f"[OK] leaderboards: {total:,} ranked users (n_likes>={min_likes})")
 
 
 def export_punching(author_df):

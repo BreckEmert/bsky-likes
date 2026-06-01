@@ -16,6 +16,7 @@ export function ListRows({ data, selectedHandle }: Props) {
     !!sel &&
     (data.mostObscure.some((r) => r.handle === sel) ||
       data.mostMainstream.some((r) => r.handle === sel));
+  const ranked = sel && !inLists ? data.rankOf(sel) : null;
 
   return (
     <div className="listrows">
@@ -33,8 +34,9 @@ export function ListRows({ data, selectedHandle }: Props) {
       />
       {sel && !inLists && (
         <div className="listrows__note">
-          @{sel} isn’t in the top or bottom {data.mostMainstream.length} (of{" "}
-          {data.total.toLocaleString()} users)
+          {ranked
+            ? `@${sel} ranks #${ranked.rank.toLocaleString()} of ${data.total.toLocaleString()} by mainstreaminess (1 = most viral)`
+            : `@${sel} isn’t a ranked user (needs ≥50 likes)`}
         </div>
       )}
     </div>
@@ -52,7 +54,13 @@ function Column({
   rows: LeaderRow[];
   selected: string | null;
 }) {
-  const max = Math.max(...rows.map((r) => Math.abs(r.value)), 1e-9);
+  // Scale bars to THIS column's value range so differences are visible
+  // (otherwise the values are all close and every bar reads as ~full).
+  const vals = rows.map((r) => r.value);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const span = hi - lo || 1;
+  const frac = (v: number) => 0.04 + 0.96 * ((v - lo) / span); // keep a sliver
   const selRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
@@ -80,7 +88,7 @@ function Column({
               <span
                 className="listrow__bar"
                 style={{
-                  width: `${(Math.abs(r.value) / max) * 100}%`,
+                  width: `${frac(r.value) * 100}%`,
                   background: accent,
                 }}
               />

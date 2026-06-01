@@ -43,7 +43,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   const points = usePointData(plot.data?.handles, plot.data?.positions);
   // Leaderboards (list-row) loads ranked rows instead of a PNG + point data.
   const leaderboard = useLeaderboard(
-    plot.highlight === "list-row" ? plot.data?.rows : undefined
+    plot.highlight === "list-row" ? plot.data : undefined
   );
   // Per-user histograms for the svg-line plot (popularity-curve).
   const isLine = plot.highlight === "svg-line";
@@ -67,7 +67,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
     : hist
     ? hist.handles
     : leaderboard
-    ? [...leaderboard.mostObscure, ...leaderboard.mostMainstream].map((r) => r.handle)
+    ? leaderboard.allHandles // search ANY ranked user, not just the shown 50s
     : [];
   const selectedPoint =
     points && selectedHandle ? points.get(selectedHandle) ?? null : null;
@@ -122,9 +122,9 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
           </div>
         )}
 
-        {/* Profile card for the selected handle (search-triggered; will also
-            back hover on the dot/scatter plots). Shown on every plot. */}
-        <ProfileCard handle={selectedHandle} />
+        {/* Profile card for the selected handle. Only on searchable plots —
+            non-selectable plots (long-tail, wakes-up) shouldn't show it. */}
+        {plot.searchable && <ProfileCard handle={selectedHandle} />}
 
         {plot.image ? (
           <img
