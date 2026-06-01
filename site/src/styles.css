@@ -289,6 +289,76 @@ body {
 
 .listrows__loading { color: var(--muted); padding: 20px; }
 
+/* ---- Profile card (selected handle; top-right over the plot) ---- */
+.profilecard {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 6;
+  width: 270px;
+  padding: 12px;
+  display: block;
+  text-decoration: none;
+  color: var(--text);
+  background: rgba(17, 21, 27, 0.96);
+  border: 1px solid var(--panel);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  animation: profilecard-in 0.18s ease-out;
+}
+.profilecard:hover { border-color: var(--accent); }
+
+@keyframes profilecard-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.profilecard__loading { font-size: 13px; color: var(--muted); }
+
+.profilecard__top { display: flex; align-items: center; gap: 10px; }
+.profilecard__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+  background: var(--panel);
+}
+.profilecard__avatar--blank { background: var(--panel); }
+.profilecard__id { min-width: 0; }
+.profilecard__name {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profilecard__handle {
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profilecard__desc {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.profilecard__stats {
+  margin-top: 9px;
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.profilecard__stats b { color: var(--text); }
+
 .plotpage__placeholder {
   display: flex;
   align-items: center;

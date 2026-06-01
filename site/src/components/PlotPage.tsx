@@ -13,6 +13,7 @@ import { useLeaderboard } from "../lib/useLeaderboard.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { SvgPoint } from "./highlights/SvgPoint.tsx";
 import { ListRows } from "./highlights/ListRows.tsx";
+import { ProfileCard } from "./ProfileCard.tsx";
 
 interface Props {
   plot: PlotConfig;
@@ -105,6 +106,10 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
             )}
           </div>
         )}
+
+        {/* Profile card for the selected handle (search-triggered; will also
+            back hover on the dot/scatter plots). Shown on every plot. */}
+        <ProfileCard handle={selectedHandle} />
 
         {plot.image ? (
           <img
