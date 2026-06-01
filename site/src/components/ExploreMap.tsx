@@ -143,6 +143,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
       {viewState && (
         <DeckGL
           views={new OrthographicView({})}
+          // Expand the hover/click hit area around the cursor so tiny dots are
+          // easy to catch (acts like an invisible larger circle per point).
+          pickingRadius={12}
           controller={
             (zoomRange
               ? { minZoom: zoomRange.min, maxZoom: zoomRange.max }
