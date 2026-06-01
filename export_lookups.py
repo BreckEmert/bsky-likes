@@ -20,22 +20,37 @@ the plotted points exactly. If these ever drift from plots.py the highlights
 will mis-align. A later refactor should factor these frames into one shared
 helper used by both files.
 """
+import sys, time
+print("[0] interpreter started; importing libraries...", flush=True)
+sys.stdout.flush()
+_t = time.time()
+
 import polars as pl
+print(f"[1] polars imported ({time.time()-_t:.1f}s)", flush=True)
 import pandas as pd
-
+print(f"[2] pandas imported ({time.time()-_t:.1f}s)", flush=True)
 from bsky_likes import config
+print(f"[3] config imported ({time.time()-_t:.1f}s)", flush=True)
 import export_web as ew
+print(f"[4] export_web imported ({time.time()-_t:.1f}s)", flush=True)
 
-print("Loading per_liker / posts / users ...", flush=True)
+print("[5] loading per_liker.parquet ...", flush=True)
 per_liker = pl.read_parquet(config.PER_LIKER_PATH)
+print(f"[6] per_liker loaded: {len(per_liker):,} rows ({time.time()-_t:.1f}s)", flush=True)
 
+# Only the columns the author aggregations need (drops the big post_uri string
+# column ~ half the bytes off disk): post_author_did, like_count, repost_count,
+# plus quote_count + post_created_at for the clean filter.
+print("[7] loading posts.parquet (5 of 7 columns) ...", flush=True)
 posts_df = (pl.scan_parquet(str(config.POSTS_PATH))
+    .select(["post_author_did", "like_count", "repost_count",
+             "quote_count", "post_created_at"])
     .filter(pl.col("quote_count") >= 0)
     .filter(pl.col("post_created_at") >= pl.datetime(2023, 1, 1, time_zone="UTC"))
     .collect())
+print(f"[8] posts loaded: {len(posts_df):,} rows ({time.time()-_t:.1f}s)", flush=True)
 users_df = pl.read_parquet(config.USERS_PATH)
-print(f"  per_liker={len(per_liker):,}  posts={len(posts_df):,}  users={len(users_df):,}",
-      flush=True)
+print(f"[9] users loaded: {len(users_df):,} rows ({time.time()-_t:.1f}s)", flush=True)
 
 # --- per_liker-only lookups -------------------------------------------------
 ew.export_activity(per_liker)
