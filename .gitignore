@@ -24,6 +24,13 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Clustering intermediates (regenerable; embed sampled handles/bios)
+cluster_bios*.json
+umap_regions*_raw.json
+naming_worksheet.txt
+topic_worksheet.txt
+.claude/scheduled_tasks.lock
+
 # Local logs/outputs — console captures embed handles, DIDs, follower counts
 logs/
 *.log
