@@ -45,10 +45,14 @@ def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200):
     bounds.json giving the axes' pixel rect in the saved PNG's pixel space.
 
     The figure background is transparent; the axes keep their dark facecolor,
-    which matches the site's dark theme. Must NOT use bbox_inches='tight'
-    (it would change the figure extent and invalidate the pixel math) -- we
-    pass bbox_inches=None explicitly to override the global 'tight' rcParam.
+    which matches the site's dark theme. The PNG MUST be the full, uncropped
+    figure so its pixel size equals imgWidth/imgHeight and plotArea (computed in
+    full-figure coords below) lines up. savefig(bbox_inches=None) does NOT do
+    that -- it defers to rcParams['savefig.bbox'], which plots.py sets to
+    'tight', cropping the image and breaking the pixel mapping. So we force the
+    full figure via rc_context(savefig.bbox=None) at save time.
     """
+    import matplotlib as mpl
     # Suppress title + subtitle (rendered as HTML on the site). Both the axes
     # title (used by most cells, sometimes carrying the subtitle as line 2) and
     # any figure suptitle are blanked. In-plot quotes/annotations are ax.text/
@@ -71,8 +75,8 @@ def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200):
     bottom_px = (1.0 - pos.y0) * fig_h_px
 
     png_path = SITE_PLOTS / f"{plot_id}.png"
-    fig.savefig(png_path, dpi=dpi, transparent=True,
-                bbox_inches=None, pad_inches=0)
+    with mpl.rc_context({"savefig.bbox": None, "savefig.pad_inches": 0}):
+        fig.savefig(png_path, dpi=dpi, transparent=True)
 
     bounds = {
         "xMin": float(x_min), "xMax": float(x_max),

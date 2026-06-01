@@ -122,7 +122,11 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
             width={stageSize.width}
             height={stageSize.height}
           >
-            {plot.highlight === "svg-point" && (
+            {/* svg-point and deck-scatter both highlight one point with the
+                same ring (both load binary point data). deck.gl hover-any-point
+                is a deferred enhancement; the search-highlight is identical. */}
+            {(plot.highlight === "svg-point" ||
+              plot.highlight === "deck-scatter") && (
               <SvgPoint
                 handle={selectedHandle}
                 point={selectedPoint}
