@@ -1,0 +1,34 @@
+UMAP clusters (HDBSCAN), 8 regions, 243,626 users.
+Numbers match umap_continuum.png. For each region: prominent members (by followers) + the authors that region most likes (the theme).
+
+=== cluster 0  (529 users) ===
+  members: @rmac.bsky.social, @gwillow.me, @galeannehurd.bsky.social, @dannyodwyer.bsky.social, @arsenalvisionpodcast.com, @hoovybaby.bsky.social, @dompreston.com, @tonytassell.bsky.social, @hintermann.bsky.social, @earlkmiller.bsky.social, @njdavies.bsky.social, @emilyoram.bsky.social
+  likes:   @dailycannon.com, @philcosta.bsky.social, @poorlydrawnarsenal.com, @arseblog.com, @prasshant.bsky.social, @goonlighting.bsky.social, @orbinho.bsky.social, @arsenalvisionpodcast.com, @afcmhr.bsky.social, @jamesbenge.bsky.social, @cartoonstevebould.bsky.social, @theshortfuse.bsky.social, @billycarpy.bsky.social, @gunnerohan.bsky.social, @sofire.bsky.social
+
+=== cluster 1  (3,004 users) ===
+  members: @ardenthistorian.bsky.social, @afelia.bsky.social, @florianaigner.at, @brodnig.bsky.social, @kattascha.bsky.social, @sixtus.net, @quinnslobodian.com, @niggi.bsky.social, @martinthuer.at, @janskudlarek.bsky.social, @johann-v-d-bron.bsky.social, @hhumorlos.bsky.social
+  likes:   @volksverpetzer.de, @sixtus.net, @claasgefroi.bsky.social, @melaura.bsky.social, @uedio.bsky.social, @florianaigner.at, @denniskberlin.bsky.social, @realalbundy.bsky.social, @nataschastrobl.bsky.social, @der-postillon.com, @johann-v-d-bron.bsky.social, @guido-kuehn.bsky.social, @sachlichepolitik.eurosky.social, @patrickbreitenbach.de, @holgertiedemann.bsky.social
+
+=== cluster 2  (436 users) ===
+  members: @mathijsbouman.nl, @mago57.bsky.social, @marieke.bsky.social, @govertschilling.nl, @liekemarsman.bsky.social, @deadfish1965.bsky.social, @ninazeelen.bsky.social, @vrijevogel56.bsky.social, @slowpokedj.bsky.social, @poldermanie.bsky.social, @hogeling.bsky.social, @electricfelix.eurosky.social
+  likes:   @dietukkerfries.bsky.social, @nadiabouras.bsky.social, @myrthehilkens.bsky.social, @levi98k.bsky.social, @realhanswiegel.bsky.social, @estherouwehand.bsky.social, @maartenhopman.bsky.social, @ninazeelen.bsky.social, @debroervanroos.bsky.social, @lisawesterveld.bsky.social, @roosvonk.bsky.social, @veramoreijn.bsky.social, @speld.nl, @zegmaarcj.eurosky.social, @schimmelpenninck.bsky.social
+
+=== cluster 3  (449 users) ===
+  members: @torhegst.bsky.social, @aninehartmann.bsky.social, @eivindtraedal.bsky.social, @frodehommedal.bsky.social, @patigallardo.bsky.social, @magnusforsberg.no, @grygaard.bsky.social, @kenrickj.bsky.social, @load-dependent.eurosky.social, @thomashansen.bsky.social, @elinlestrange.bsky.social, @festlegen.bsky.social
+  likes:   @kthftw.bsky.social, @magnusforsberg.no, @sodafountainrag.bsky.social, @patigallardo.bsky.social, @elinlestrange.bsky.social, @volvo240.bsky.social, @eivind1984.bsky.social, @litterat.party, @eivindtraedal.bsky.social, @doremus-schafer.bsky.social, @didriksoderlind.bsky.social, @andersheger.bsky.social, @odarygh.bsky.social, @nilshenrik.bsky.social, @tophepahle.bsky.social
+
+=== cluster 4  (2,539 users) ===
+  members: @jairme.bsky.social, @paulomoreira.bsky.social, @whimsicalmuse.bsky.social, @jnascim.info, @sulamoon.bsky.social, @mikannn.bsky.social, @carapanarana.bsky.social, @msoares.bsky.social, @luduvicu.bsky.social, @vanialobinha.bsky.social, @samirsalimjr.com, @gabrieldread.bsky.social
+  likes:   @orathiago.com, @patodeborracha.bsky.social, @camarotedacpi.bsky.social, @aparecuda.bsky.social, @noonechomsky.bsky.social, @bicicreta.bsky.social, @freeblowjob.deichator.ar, @piratariaonline.bsky.social, @moara.bsky.social, @crisvector.com, @avesbrasil.bsky.social, @danielduncan.bsky.social, @silvoca.bsky.social, @rickazzevedo.bsky.social, @laertecoutinho.bsky.social
+
+=== cluster 5  (1,679 users) ===
+  members: @michaelzemmour.cpesr.fr, @usul2000.bsky.social, @bouletcorp.bsky.social, @nhabouzite.bsky.social, @thespaceshipper.com, @uneheuredepeine.bsky.social, @astropierre.com, @oliviercyran.bsky.social, @ferrydanini.bsky.social, @ebibi.fr, @fayzaa.bsky.social, @nora.bz
+  likes:   @padrepio.bsky.social, @uneheuredepeine.bsky.social, @jostavodebauge.bsky.social, @docteurbagarre.bsky.social, @taigasangare.eurosky.social, @bouletcorp.bsky.social, @gdeleur.bsky.social, @vivelefeu.bsky.social, @mitildide.bsky.social, @nicolashenin.net, @msmeeea.bsky.social, @monomarchos.agency, @minimaliste13.cpesr.fr, @cedricmas.bsky.social, @hahnemann.bsky.social
+
+=== cluster 6  (232,491 users) ===
+  members: @atrupar.com, @hankgreen.bsky.social, @chrislhayes.bsky.social, @rbreich.bsky.social, @mollyjongfast.bsky.social, @hcrichardson.bsky.social, @jamellebouie.net, @muellershewrote.com, @jay.bsky.team, @thegodshow.com, @bencollins.bsky.social, @joncooper-us.bsky.social
+  likes:   @atrupar.com, @thetnholler.bsky.social, @jamellebouie.net, @muellershewrote.com, @ronfilipkowski.bsky.social, @bencollins.bsky.social, @rbreich.bsky.social, @theonion.com, @kevinmkruse.bsky.social, @mrsbettybowers.bsky.social, @meidastouch.com, @gtconway.bsky.social, @rincewind.run, @joncooper-us.bsky.social, @junlper.beer
+
+=== cluster 7  (414 users) ===
+  members: @normanroots.bsky.social, @uh8.bsky.social, @bonkski.bsky.social, @airbonk.bsky.social, @toddkolod.bsky.social, @charisma0528.bsky.social, @bapattack.bsky.social, @serbianism.com, @larswilderang.cornucopia.se, @thatproviso.bsky.social, @lisimisera.bsky.social, @eugenemcparland.bsky.social
+  likes:   @maks23.bsky.social, @noelreports.com, @chriso-wiki.bsky.social, @wartranslated.bsky.social, @prune602.bsky.social, @antongerashchenko.bsky.social, @kyivindependent.com, @kateinkharkiv.bsky.social, @darthputinkgb.bsky.social, @twmcltd.bsky.social, @tendar.bsky.social, @militarynewsua.bsky.social, @united24media.com, @specialkhersoncat.bsky.social, @theukrainianreview.bsky.social

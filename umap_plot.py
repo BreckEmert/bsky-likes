@@ -10,6 +10,7 @@ cluster, the top accounts by followers AND the authors the cluster most likes
 
 Run:  python umap_plot.py
 """
+import json
 import time
 import numpy as np
 import polars as pl
@@ -28,6 +29,22 @@ DPI = 220
 OUT_PNG = config.PLOTS_DIR / "umap_continuum.png"
 OUT_TXT = config.PROJECT_DIR.parent / "umap_clusters.txt"
 COORDS = config.PROJECT_DIR / "umap_coords.parquet"
+LABELS_CACHE = config.PROJECT_DIR / "umap_labels.npy"   # cached cluster labels
+REGIONS_JSON = config.PROJECT_DIR.parent / "site" / "public" / "explore" / "regions.json"
+
+# Human names for the regions (HDBSCAN ids are deterministic for fixed data +
+# params; verify against umap_clusters.txt after a re-run). Unmapped ids fall
+# back to "Region N".
+REGION_NAMES = {
+    0: "Arsenal FC",
+    1: "Germanosphere",
+    2: "Dutch Sky",
+    3: "Norway",
+    4: "Brazil",
+    5: "Francosphère",
+    6: "US Politics",
+    7: "Ukraine Watch",
+}
 
 t0 = time.time()
 
@@ -45,16 +62,27 @@ xy = np.column_stack([df["x"].to_numpy(), df["y"].to_numpy()]).astype(np.float64
 print(f"    {len(df):,} users ({el()})", flush=True)
 
 print("[2] clustering (for naming only; not shown as hard colors)...", flush=True)
-try:
-    from sklearn.cluster import HDBSCAN
-    labels = HDBSCAN(min_cluster_size=MIN_CLUSTER_SIZE, min_samples=10,
-                     core_dist_n_jobs=-1).fit_predict(xy)
-    algo = "HDBSCAN"
-except Exception as e:
-    print(f"    HDBSCAN unavailable ({e}); KMeans(50)", flush=True)
-    from sklearn.cluster import KMeans
-    labels = KMeans(n_clusters=50, n_init=4, random_state=42).fit_predict(xy)
-    algo = "KMeans50"
+if LABELS_CACHE.exists():
+    labels = np.load(LABELS_CACHE)
+    if len(labels) != len(xy):
+        labels = None
+    else:
+        algo = "HDBSCAN(cached)"
+        print(f"    loaded cached labels ({el()})", flush=True)
+else:
+    labels = None
+if labels is None:
+    try:
+        from sklearn.cluster import HDBSCAN
+        labels = HDBSCAN(min_cluster_size=MIN_CLUSTER_SIZE, min_samples=10,
+                         n_jobs=-1).fit_predict(xy)
+        algo = "HDBSCAN"
+    except Exception as e:
+        print(f"    HDBSCAN unavailable ({e}); KMeans(50)", flush=True)
+        from sklearn.cluster import KMeans
+        labels = KMeans(n_clusters=50, n_init=4, random_state=42).fit_predict(xy)
+        algo = "KMeans50"
+    np.save(LABELS_CACHE, labels)   # cache so re-runs skip the ~5min clustering
 df = df.with_columns(pl.Series("cluster", labels))
 n_clusters = len({c for c in labels if c >= 0})
 print(f"    {algo}: {n_clusters} clusters ({el()})", flush=True)
@@ -120,5 +148,20 @@ for c in range(n_clusters):
     lines.append("  likes:   " + ", ".join("@" + h for h in authors))
     lines.append("")
 OUT_TXT.write_text("\n".join(lines), encoding="utf-8")
-print(f"[OK] {OUT_TXT}  ({el()} total) — paste it to me to name the regions.",
+print(f"    -> {OUT_TXT} ({el()})", flush=True)
+
+print("[6] writing regions.json (label centroids) for the web map...", flush=True)
+regions = []
+for c in range(n_clusters):
+    m = labels == c
+    regions.append({
+        "id": int(c),
+        "name": REGION_NAMES.get(c, f"Region {c}"),
+        "x": float(xy[m, 0].mean()),
+        "y": float(xy[m, 1].mean()),
+        "size": int(m.sum()),
+    })
+REGIONS_JSON.parent.mkdir(parents=True, exist_ok=True)
+REGIONS_JSON.write_text(json.dumps(regions, ensure_ascii=False), encoding="utf-8")
+print(f"[OK] {REGIONS_JSON}  ({el()} total) — {len(regions)} named regions.",
       flush=True)

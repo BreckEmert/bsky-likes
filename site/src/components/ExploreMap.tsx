@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { OrthographicView, LinearInterpolator } from "@deck.gl/core";
-import { ScatterplotLayer, BitmapLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, BitmapLayer, TextLayer } from "@deck.gl/layers";
 import { useExploreData } from "../lib/useExploreData.ts";
+import { useRegions, type Region } from "../lib/useRegions.ts";
 import { useElementSize } from "../lib/useElementSize.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { ProfileCard } from "./ProfileCard.tsx";
@@ -31,6 +32,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const data = useExploreData();
+  const regions = useRegions();
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [viewState, setViewState] = useState<VS | null>(null);
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
@@ -83,6 +85,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const FADE_END_PCT = 50;
   const bgOpacity =
     clamp((FADE_END_PCT - zoomPct) / (FADE_END_PCT - FADE_START_PCT), 0, 1) * 0.95;
+  // Region labels orient you at the overview; fade them out once you're zoomed
+  // in enough to be inspecting individuals (~35% -> 70%).
+  const labelOpacity = clamp((70 - zoomPct) / (70 - 35), 0, 1);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -135,8 +140,33 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
         })
       );
     }
+    // Region labels (cluster centroids), on top, fading with zoom.
+    if (regions.length && labelOpacity > 0) {
+      out.push(
+        new TextLayer({
+          id: "regions",
+          data: regions,
+          getPosition: (r: Region) => [r.x, r.y],
+          getText: (r: Region) => r.name,
+          getSize: (r: Region) => clamp(12 + 4 * Math.log10(r.size), 14, 30),
+          sizeUnits: "pixels",
+          getColor: [255, 255, 255, 235],
+          fontFamily: '"DejaVu Sans", system-ui, sans-serif',
+          fontWeight: 700,
+          characterSet: "auto",
+          background: true,
+          getBackgroundColor: [10, 13, 18, 165],
+          backgroundPadding: [7, 4, 7, 4],
+          getTextAnchor: "middle",
+          getAlignmentBaseline: "center",
+          opacity: labelOpacity,
+          pickable: false,
+          updateTriggers: { opacity: [labelOpacity] },
+        })
+      );
+    }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, labelOpacity]);
 
   return (
     <div className="exploremap" ref={ref}>
