@@ -22,8 +22,8 @@ from bsky_likes import config
 
 OUT = config.PROJECT_DIR.parent / "site" / "public" / "explore"
 OUT.mkdir(parents=True, exist_ok=True)
-GRID = 640         # density image resolution
-BLUR = 5.0         # gaussian sigma (in cells) for a smooth field
+GRID = 1024        # density image resolution (higher = crisper)
+BLUR = 2.6         # gaussian sigma (in cells); lower = crisper, less bloom
 
 df = pl.read_parquet(config.PROJECT_DIR / "umap_coords.parquet")
 x = df["x"].to_numpy().astype(np.float64)
@@ -53,7 +53,8 @@ rows, cols = np.mgrid[0:GRID, 0:GRID]
 tx_img = cols / (GRID - 1)
 ty_img = 1.0 - rows / (GRID - 1)          # row 0 -> ty 1 -> yMax (top)
 rgb_img = continuum(tx_img, ty_img)
-alpha = (np.flipud(Dn.T) ** 0.55)         # Dn is [x,y] -> .T [y,x] -> flip so row0=yMax
+alpha = (np.flipud(Dn.T) ** 0.5)          # Dn is [x,y] -> .T [y,x] -> flip so row0=yMax
+# lower exponent brightens mid densities to compensate for the tighter blur
 rgba = np.dstack([rgb_img, alpha * 255.0]).clip(0, 255).astype(np.uint8)
 plt.imsave(OUT / "density.png", rgba)
 

@@ -21,8 +21,8 @@ interface VS {
 // followers); reveal ~2.4x more per zoom level from one GPU buffer (Theo's
 // snappy pattern). Lower base + gentler ramp = the reveal is clearly visible
 // across the whole zoom range.
-const LOD_BASE = 12000;
-const LOD_GROWTH = 2.4;
+const LOD_BASE = 40000;
+const LOD_GROWTH = 3.4;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
@@ -65,9 +65,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     if (!data || !viewState) return 0;
     return Math.min(data.n, Math.round(LOD_BASE * Math.pow(LOD_GROWTH, zoomDelta)));
   }, [data, viewState, zoomDelta]);
-  // Crisp small dots at the overview (the density background carries the color
+  // Tiny crisp dots at the overview (the density background carries the color
   // there); grow a bit as you zoom in for hover/click.
-  const pointRadius = clamp(1.0 + 0.45 * zoomDelta, 1.0, 6.0);
+  const pointRadius = clamp(0.55 + 0.4 * zoomDelta, 0.55, 5.0);
   // Density-color background fades out by ~3/4 of the way in, leaving just dots.
   const bgOpacity = clamp(1 - zoomDelta / 4.5, 0, 1) * 0.95;
 
@@ -94,8 +94,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
         },
         getRadius: pointRadius,
         radiusUnits: "pixels",
-        radiusMinPixels: 1,
-        opacity: 0.72,
+        radiusMinPixels: 0.5,
+        opacity: 0.85,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 220],
