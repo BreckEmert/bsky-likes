@@ -17,12 +17,15 @@ interface VS {
   zoom: number;
 }
 
-// LOD: at the overview show only the most-prominent N points (sorted by
-// followers); reveal ~2.4x more per zoom level from one GPU buffer (Theo's
-// snappy pattern). Lower base + gentler ramp = the reveal is clearly visible
-// across the whole zoom range.
-const LOD_BASE = 40000;
-const LOD_GROWTH = 3.4;
+// LOD: points.bin is STRATIFIED (blue-noise) order -- any prefix is spread
+// evenly across the field, so the overview traces the whole footprint (and
+// matches the color layer) instead of just the dense cores. We reveal more
+// from one GPU buffer as you zoom (Theo's snappy pattern).
+//   numVisible = LOD_BASE * growth^zoomDelta,  growth chosen so the count
+//   reaches the full point set EXACTLY at the max zoom (zoomDelta == ZOOM_SPAN)
+// -- a smooth ramp across the whole range, no single "everything appears" jump.
+const LOD_BASE = 20000;   // overview ~= one point per occupied cell (even)
+const ZOOM_SPAN = 6;      // max zoom == fit + ZOOM_SPAN (keep in sync below)
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
@@ -41,7 +44,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
       Math.log2(Math.min(size.width / (xMax - xMin), size.height / (yMax - yMin))) - 0.2;
     initialZoom.current = z;
     // Cap zoom so users can't get lost: no zoom-out past the fit; bounded in.
-    setZoomRange({ min: z, max: z + 6 });
+    setZoomRange({ min: z, max: z + ZOOM_SPAN });
     setViewState({ target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: z });
   }, [data, size, viewState]);
 
@@ -53,7 +56,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     const i = data.index.get(sel)!;
     setViewState({
       target: [data.points[2 * i], data.points[2 * i + 1], 0],
-      zoom: Math.max(viewState.zoom, initialZoom.current + 6),
+      zoom: Math.max(viewState.zoom, initialZoom.current + ZOOM_SPAN),
       transitionDuration: 800,
       transitionInterpolator: new LinearInterpolator(["target", "zoom"]),
     } as never);
@@ -63,13 +66,16 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const zoomDelta = viewState ? Math.max(0, viewState.zoom - initialZoom.current) : 0;
   const numVisible = useMemo(() => {
     if (!data || !viewState) return 0;
-    return Math.min(data.n, Math.round(LOD_BASE * Math.pow(LOD_GROWTH, zoomDelta)));
+    // growth so LOD_BASE * growth^ZOOM_SPAN == data.n (full set only at max zoom)
+    const growth = Math.pow(data.n / LOD_BASE, 1 / ZOOM_SPAN);
+    return Math.min(data.n, Math.round(LOD_BASE * Math.pow(growth, zoomDelta)));
   }, [data, viewState, zoomDelta]);
   // Tiny crisp dots at the overview (the density background carries the color
-  // there); grow a bit as you zoom in for hover/click.
-  const pointRadius = clamp(0.55 + 0.4 * zoomDelta, 0.55, 5.0);
+  // there); grow gently as you zoom in for hover/click.
+  const pointRadius = clamp(0.35 + 0.45 * zoomDelta, 0.35, 4.5);
   // Density-color background fades out by ~3/4 of the way in, leaving just dots.
   const bgOpacity = clamp(1 - zoomDelta / 4.5, 0, 1) * 0.95;
+  const zoomPct = Math.round((zoomDelta / ZOOM_SPAN) * 100);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -94,7 +100,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
         },
         getRadius: pointRadius,
         radiusUnits: "pixels",
-        radiusMinPixels: 0.5,
+        radiusMinPixels: 0.4,
         opacity: 0.85,
         pickable: true,
         autoHighlight: true,
@@ -177,6 +183,15 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
       {hover && (
         <div className="exploremap__tip" style={{ left: hover.x + 12, top: hover.y + 12 }}>
           @{hover.handle}
+        </div>
+      )}
+
+      {/* Zoom / LOD readout so it's easy to point at "what's happening here". */}
+      {data && viewState && (
+        <div className="exploremap__zoom">
+          zoom {zoomPct}%
+          <span className="exploremap__zoom-sep">·</span>
+          {numVisible.toLocaleString()} / {data.n.toLocaleString()} pts
         </div>
       )}
     </div>

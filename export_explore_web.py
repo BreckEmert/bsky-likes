@@ -58,11 +58,38 @@ alpha = (np.flipud(Dn.T) ** 0.5)          # Dn is [x,y] -> .T [y,x] -> flip so r
 rgba = np.dstack([rgb_img, alpha * 255.0]).clip(0, 255).astype(np.uint8)
 plt.imsave(OUT / "density.png", rgba)
 
-# --- per-point density -> sort cores first --------------------------------
+# --- per-point density (for color/secondary ordering) ---------------------
 xb = np.clip(((x - xMin) / (xMax - xMin) * (GRID - 1)).astype(int), 0, GRID - 1)
 yb = np.clip(((y - yMin) / (yMax - yMin) * (GRID - 1)).astype(int), 0, GRID - 1)
 pt_density = D[xb, yb]
-order = np.argsort(-pt_density)           # densest first
+
+# --- STRATIFIED ("blue-noise") ordering ------------------------------------
+# Instead of densest-first (which makes the overview LOD show ONLY the dense
+# cores, not matching the color field), order so any prefix is spread evenly
+# across space: take the 1st point of every occupied cell, then the 2nd of
+# each, etc. The visible subset then traces the whole footprint at every zoom
+# (Theo's "constant density per zoom" feel) and fills in proportionally as the
+# LOD count grows. Within each rank-tier, denser cells come first so the cores
+# still brighten faster -- accentuating, not replacing, the color layer.
+SGRID = 256                                # stratification cells per axis
+sxb = np.clip(((x - xMin) / (xMax - xMin) * (SGRID - 1)).astype(int), 0, SGRID - 1)
+syb = np.clip(((y - yMin) / (yMax - yMin) * (SGRID - 1)).astype(int), 0, SGRID - 1)
+cell = sxb.astype(np.int64) * SGRID + syb
+
+n = len(x)
+rng = np.random.default_rng(0)             # deterministic shuffle for tie-break
+shuf = rng.permutation(n)
+by_cell = np.argsort(cell[shuf], kind="stable")     # group shuffled pts by cell
+sorted_cells = cell[shuf][by_cell]
+_, start_idx, counts = np.unique(sorted_cells, return_index=True, return_counts=True)
+within = np.arange(n) - np.repeat(start_idx, counts)  # rank within each cell
+ranks = np.empty(n, dtype=np.int64)
+ranks[shuf[by_cell]] = within                         # rank per original index
+
+# primary: cell-rank asc (even spread); secondary: density desc (cores first)
+order = np.lexsort((-pt_density, ranks))
+print(f"[i] {len(start_idx):,} occupied cells (SGRID={SGRID}); "
+      f"rank-0 layer = {int((ranks == 0).sum()):,} evenly-spread points")
 
 xs = x[order].astype(np.float32)
 ys = y[order].astype(np.float32)
