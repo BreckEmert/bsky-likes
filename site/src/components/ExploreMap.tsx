@@ -26,6 +26,7 @@ interface VS {
 // -- a smooth ramp across the whole range, no single "everything appears" jump.
 const LOD_BASE = 20000;   // overview ~= one point per occupied cell (even)
 const ZOOM_SPAN = 6;      // max zoom == fit + ZOOM_SPAN (keep in sync below)
+const LOD_FULL_PCT = 63;  // zoom % at which the full point set is shown
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
@@ -66,8 +67,10 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const zoomDelta = viewState ? Math.max(0, viewState.zoom - initialZoom.current) : 0;
   const numVisible = useMemo(() => {
     if (!data || !viewState) return 0;
-    // growth so LOD_BASE * growth^ZOOM_SPAN == data.n (full set only at max zoom)
-    const growth = Math.pow(data.n / LOD_BASE, 1 / ZOOM_SPAN);
+    // growth so the count reaches data.n at LOD_FULL_PCT of the zoom range
+    // (capped at data.n by the min() for any further zoom-in).
+    const fullDelta = (LOD_FULL_PCT / 100) * ZOOM_SPAN;
+    const growth = Math.pow(data.n / LOD_BASE, 1 / fullDelta);
     return Math.min(data.n, Math.round(LOD_BASE * Math.pow(growth, zoomDelta)));
   }, [data, viewState, zoomDelta]);
   // Tiny crisp dots at the overview (the density background carries the color
