@@ -50,7 +50,8 @@ SEED_ISLANDS = ["wickedwookie.bsky.social", "egbertl.bsky.social",
                 "crocodyllul.bsky.social", "uansetsaa.bsky.social", "wscherphof.bsky.social",
                 "daffyduke.bsky.social", "radiotystnad.bsky.social",
                 "meerbeteralles.bsky.social", "fimohokon.bsky.social", "gusyd.bsky.social",
-                "jetpac.bsky.social", "mrmarkvard.bsky.social", "anulallukka.bsky.social"]
+                "jetpac.bsky.social", "mrmarkvard.bsky.social", "anulallukka.bsky.social",
+                "basholtrop.bsky.social", "vlammendzwaard.bsky.social"]
 SEED_ISLAND_MAXSIZE = 2500   # only treat a seed's cluster as an island if <= this
 TOPIC_K = 10          # topical clusters among English users
 TOPIC_SAMPLE = 30     # bios sampled per topical cluster for naming
@@ -59,7 +60,8 @@ APPVIEW = "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles"
 COORDS = config.PROJECT_DIR / "umap_coords.parquet"
 Z_CACHE = config.PROJECT_DIR / "umap_tfidf_Z.npy"
 DID_CACHE = config.PROJECT_DIR / "umap_tfidf_dids.json"
-EN_CACHE = config.PROJECT_DIR / "english_dids.json"   # cached English user set
+EN_CACHE = config.PROJECT_DIR / "english_dids.json"   # final English user set (post seed-islands)
+LANG_CACHE = config.PROJECT_DIR / "lang_survivors.json"  # post-language-pass (pre seed); deterministic, so cache it to make seed-flagging fast
 MEMBERS_OUT = config.PROJECT_DIR / "cluster_members_en.parquet"
 REGIONS_RAW = config.PROJECT_DIR.parent / "umap_regions_en_raw.json"
 BIOS_OUT = config.PROJECT_DIR.parent / "cluster_bios_en.json"
@@ -130,11 +132,13 @@ def fetch_bios(hs):
         out[h] = prof_cache.get(h.lower(), "")
     return out
 
-# ---- language pass (cached) -----------------------------------------------
-if EN_CACHE.exists():
-    en_set = set(json.loads(EN_CACHE.read_text()))
-    en_mask = np.array([d in en_set for d in dids])
-    print(f"[2] loaded cached English set: {en_mask.sum():,} users ({el()})", flush=True)
+# ---- language pass (cached to LANG_CACHE; deterministic) ------------------
+N = len(dids)
+if LANG_CACHE.exists():
+    lang_set = set(json.loads(LANG_CACHE.read_text()))
+    alive = np.array([d in lang_set for d in dids])
+    lang_tot = {}
+    print(f"[2] loaded cached post-language set: {alive.sum():,} users ({el()})", flush=True)
 else:
     def cluster_lang(handles_):
         """-> (dominant_lang, dominant_fraction, english_fraction, n_detections)."""
@@ -152,12 +156,8 @@ else:
         top = max(set(langs), key=langs.count)
         return top, langs.count(top) / len(langs), langs.count("en") / len(langs), len(langs)
 
-    # ITERATIVE drop: each pass re-clusters the survivors, so non-English that
-    # didn't form a pure cluster last time re-concentrates and gets caught.
-    # Append to the drop list until a pass removes < 0.4% of all users.
     print(f"[2] iterative language filter (K={K_LANG}, drop clusters whose dominant "
           f"language is non-English)...", flush=True)
-    N = len(dids)
     alive = np.ones(N, bool)
     lang_tot = {}
     for it in range(7):
@@ -173,7 +173,6 @@ else:
         drop = np.zeros(N, bool); itlang = {}
         for c in range(K):
             top, top_frac, en, ndet = cluster_lang(samp[c])
-            # drop only if a NON-English language is the clear plurality
             if ndet >= 6 and top != "en" and top_frac >= 0.45 and en < 0.5:
                 drop[idx[lab == c]] = True
                 itlang[top] = itlang.get(top, 0) + int((lab == c).sum())
@@ -185,33 +184,35 @@ else:
               f"-> {alive.sum():,} alive ({el()})", flush=True)
         if nd < 0.0015 * N:
             break
+    LANG_CACHE.write_text(json.dumps([dids[i] for i in np.where(alive)[0]]))
 
-    # --- seed-island removal: drop each flagged seed's fine cluster -----------
-    print("[2b] seed-island removal...", flush=True)
-    idx = np.where(alive)[0]
-    flab = KMeans(n_clusters=K_LANG_FINE, n_init=3, random_state=SEED).fit_predict(Z[idx])
-    hl = [(handles[i] or "").lower() for i in range(N)]
-    for seed in SEED_ISLANDS:
-        try:
-            si = hl.index(seed)
-        except ValueError:
-            print(f"    {seed}: not in dataset", flush=True); continue
-        if not alive[si]:
-            print(f"    {seed}: already removed", flush=True); continue
-        pos = np.where(idx == si)[0]
-        if not len(pos):
-            continue
-        c = flab[pos[0]]; members = idx[flab == c]
-        if len(members) <= SEED_ISLAND_MAXSIZE:
-            alive[members] = False
-            print(f"    {seed}: dropped island of {len(members):,}", flush=True)
-        else:
-            print(f"    {seed}: in large cluster ({len(members):,}) -> English-core, skipped", flush=True)
+# ---- seed-island removal (always runs; fast -- this is what changes when you
+#      flag more islands) ---------------------------------------------------
+print("[2b] seed-island removal...", flush=True)
+idx = np.where(alive)[0]
+flab = KMeans(n_clusters=K_LANG_FINE, n_init=3, random_state=SEED).fit_predict(Z[idx])
+hl = [(handles[i] or "").lower() for i in range(N)]
+for seed in SEED_ISLANDS:
+    try:
+        si = hl.index(seed)
+    except ValueError:
+        print(f"    {seed}: not in dataset", flush=True); continue
+    if not alive[si]:
+        print(f"    {seed}: already removed", flush=True); continue
+    pos = np.where(idx == si)[0]
+    if not len(pos):
+        continue
+    c = flab[pos[0]]; members = idx[flab == c]
+    if len(members) <= SEED_ISLAND_MAXSIZE:
+        alive[members] = False
+        print(f"    {seed}: dropped island of {len(members):,}", flush=True)
+    else:
+        print(f"    {seed}: in large cluster ({len(members):,}) -> English-core, skipped", flush=True)
 
-    en_mask = alive
-    print(f"[2] kept {en_mask.sum():,} English; dropped {(~en_mask).sum():,} non-English "
-          f"({lang_tot} + seed islands) ({el()})", flush=True)
-    EN_CACHE.write_text(json.dumps([dids[i] for i in np.where(en_mask)[0]]))
+en_mask = alive
+print(f"[2] kept {en_mask.sum():,} English; dropped {(~en_mask).sum():,} non-English "
+      f"({lang_tot} + seed islands) ({el()})", flush=True)
+EN_CACHE.write_text(json.dumps([dids[i] for i in np.where(en_mask)[0]]))
 
 # ---- topical pass on English users ----------------------------------------
 print(f"[3] KMeans({TOPIC_K}) topical pass on English users...", flush=True)
