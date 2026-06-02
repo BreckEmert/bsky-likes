@@ -49,7 +49,83 @@ body {
 .plots {
   display: flex;
   min-height: 95vh;
+  position: relative; /* anchor the seam + corner bracket */
 }
+
+/* ---- Seam between the interactive map and the premade plots ---- */
+/* Faint L "boomerang" brackets framing the boundary: bottom-left of the map,
+   mirrored top-left of the plots. Masked so they fade away from the corner. */
+.explore::after,
+.plots::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 210px;
+  height: 58px;
+  border-left: 1.5px solid rgba(230, 237, 243, 0.55);
+  pointer-events: none;
+  z-index: 3;
+}
+.explore::after {
+  bottom: 0;
+  border-bottom: 1.5px solid rgba(230, 237, 243, 0.55);
+  border-bottom-left-radius: 5px;
+  -webkit-mask-image: radial-gradient(150px 90px at 0% 100%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(150px 90px at 0% 100%, #000 25%, transparent 78%);
+}
+.plots::before {
+  top: 0;
+  border-top: 1.5px solid rgba(230, 237, 243, 0.55);
+  border-top-left-radius: 5px;
+  -webkit-mask-image: radial-gradient(150px 90px at 0% 0%, #000 25%, transparent 78%);
+  mask-image: radial-gradient(150px 90px at 0% 0%, #000 25%, transparent 78%);
+}
+
+/* Hover strip along the seam edge; reveals a clickable chevron bar at the left. */
+.seam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 5;
+  cursor: pointer;
+}
+.seam--down { bottom: 0; }
+/* Constrained to the left label column so it never sits over the tab bar
+   (top-right of the plots section) and block tab clicks. */
+.seam--up { top: 0; right: auto; width: 240px; }
+
+.seam__bar {
+  position: absolute;
+  left: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(230, 237, 243, 0.9);
+  background: rgba(230, 237, 243, 0.08);
+  border: 1px solid rgba(230, 237, 243, 0.22);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.seam--down .seam__bar { bottom: 11px; transform: translateY(6px); }
+.seam--up .seam__bar { top: 11px; transform: translateY(-6px); }
+.seam:hover .seam__bar { opacity: 1; transform: translateY(0); }
+
+/* CSS chevron (rotated corner). Points down on the map seam, up on the plots. */
+.seam__chev {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+.seam--down .seam__chev { transform: rotate(45deg) translate(-1px, -1px); }
+.seam--up .seam__chev { transform: rotate(-135deg) translate(-1px, -1px); }
 .plots__label {
   flex: 0 0 170px;
   padding: 28px 18px;
