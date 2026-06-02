@@ -99,9 +99,9 @@ export const PLOTS: PlotConfig[] = [
   },
   {
     id: "half-life",
-    tabLabel: "Engagement Age",
-    title: "Engagement Half-Life",
-    subtitle: "How fresh is a post when it gets liked?",
+    tabLabel: "Like Timing",
+    title: "How fast do posts get liked?",
+    subtitle: "post age at the moment it's liked — Bluesky engages with very fresh content",
     image: "/plots/half-life.png",
     // Aggregate histogram — no per-handle (x,y), so not searchable. (Guide
     // imagined a deck-scatter here; revisit if we want a per-user variant.)
