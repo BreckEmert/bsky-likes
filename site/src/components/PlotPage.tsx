@@ -129,7 +129,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
         {plot.image ? (
           <img
             key={plot.id}
-            className="plotpage__image"
+            className={`plotpage__image plotpage__image--${plot.id}`}
             src={plot.image}
             alt={plot.title}
             draggable={false}

@@ -148,6 +148,12 @@ body {
   object-fit: contain;
   user-select: none;
 }
+/* Attention Inequality (long-tail) ran a bit large; cap it a touch. Safe
+   because this plot has no highlight overlay to keep pixel-aligned. */
+.plotpage__image--long-tail {
+  max-width: 76%;
+  max-height: 86%;
+}
 
 /* Overlay sits over the whole stage; highlight/deck layers draw here. It must
    not intercept pointer events meant for the plot underneath. */
@@ -404,6 +410,17 @@ body {
   height: 100%;
   overflow: hidden;
   background: #0a0d12;
+}
+/* Animated atmosphere overlay (faint moving bloom + slow color waves). */
+.exploremap__atmosphere {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  mix-blend-mode: screen;
+  opacity: 0.5;
 }
 .exploremap__tip {
   position: absolute;

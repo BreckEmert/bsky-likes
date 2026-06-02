@@ -7,6 +7,7 @@ import { useRegions, type Region } from "../lib/useRegions.ts";
 import { useElementSize } from "../lib/useElementSize.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { ProfileCard } from "./ProfileCard.tsx";
+import { MapAtmosphere } from "./MapAtmosphere.tsx";
 
 interface Props {
   selectedHandle: string | null;
@@ -243,6 +244,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
           }}
         />
       )}
+      {viewState && <MapAtmosphere />}
       {!data && <div className="exploremap__status">loading map…</div>}
 
       <div className="exploremap__search">

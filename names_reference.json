@@ -1,0 +1,993 @@
+{
+ "note": "Approved region-label names + the authors each cluster most likes (signature for re-matching after re-clustering). Style: blunt-but-fun, no jargon.",
+ "tier1": [
+  {
+   "name": "Resistance HQ",
+   "top_likes": [
+    "atrupar.com",
+    "thetnholler.bsky.social",
+    "muellershewrote.com",
+    "ronfilipkowski.bsky.social",
+    "meidastouch.com",
+    "rbreich.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "nothoodlum.bsky.social",
+    "joncooper-us.bsky.social",
+    "gtconway.bsky.social",
+    "kackbro.bsky.social",
+    "marcelias.bsky.social"
+   ]
+  },
+  {
+   "name": "Snarky Culture",
+   "top_likes": [
+    "bencollins.bsky.social",
+    "theonion.com",
+    "jamellebouie.net",
+    "junlper.beer",
+    "dieworkwear.bsky.social",
+    "brendelbored.bsky.social",
+    "iwriteok.bsky.social",
+    "parkermolloy.com",
+    "lauren.rotatingsandwiches.com",
+    "atrupar.com",
+    "internethippo.bsky.social",
+    "katmabu.bsky.social"
+   ]
+  },
+  {
+   "name": "Nerds & Wonks",
+   "top_likes": [
+    "jamellebouie.net",
+    "bencollins.bsky.social",
+    "theonion.com",
+    "atrupar.com",
+    "junlper.beer",
+    "kevinmkruse.bsky.social",
+    "brendelbored.bsky.social",
+    "rincewind.run",
+    "parkermolloy.com",
+    "lauren.rotatingsandwiches.com",
+    "kenwhite.bsky.social",
+    "cait.bsky.social"
+   ]
+  },
+  {
+   "name": "Brits & Bookworms",
+   "top_likes": [
+    "scalzi.com",
+    "stephenkb.bsky.social",
+    "xkcd.com",
+    "weratedogs.com",
+    "rincewind.run",
+    "flyingrodent.bsky.social",
+    "fesshole.bsky.social",
+    "tkingfisher.com",
+    "oldenoughtosay.com",
+    "youngvulgarian.marieleconte.com",
+    "theonion.com",
+    "dieworkwear.bsky.social"
+   ]
+  },
+  {
+   "name": "Teachers & Resisters",
+   "top_likes": [
+    "atrupar.com",
+    "ronfilipkowski.bsky.social",
+    "thetnholler.bsky.social",
+    "gtconway.bsky.social",
+    "rbreich.bsky.social",
+    "muellershewrote.com",
+    "mrsbettybowers.bsky.social",
+    "joncooper-us.bsky.social",
+    "markhamillofficial.bsky.social",
+    "meidastouch.com",
+    "acyn.bsky.social",
+    "weratedogs.com"
+   ]
+  },
+  {
+   "name": "Weebs & VTubers",
+   "top_likes": [
+    "aidenr0.bsky.social",
+    "furry-hater.bsky.social",
+    "beetlemoses.bsky.social",
+    "junlper.beer",
+    "hausofdecline.bsky.social",
+    "jtp.bsky.social",
+    "b0tster.yeag.gay",
+    "theonion.com",
+    "unicouniuni3.bsky.social",
+    "w0lfertinger666.bsky.social",
+    "ladyemily.nebula.tv",
+    "wario64.bsky.social"
+   ]
+  },
+  {
+   "name": "Queer Gamers",
+   "top_likes": [
+    "atrupar.com",
+    "jamellebouie.net",
+    "rincewind.run",
+    "kenwhite.bsky.social",
+    "kevinmkruse.bsky.social",
+    "brendelbored.bsky.social",
+    "parkermolloy.com",
+    "bencollins.bsky.social",
+    "lauren.rotatingsandwiches.com",
+    "marisakabas.bsky.social",
+    "diplomatofnight.com",
+    "mtsw.bsky.social"
+   ]
+  },
+  {
+   "name": "Artists & Animators",
+   "top_likes": [
+    "beetlemoses.bsky.social",
+    "theonion.com",
+    "junlper.beer",
+    "aidenr0.bsky.social",
+    "unicouniuni3.bsky.social",
+    "gooseworx.bsky.social",
+    "hausofdecline.bsky.social",
+    "ladyemily.nebula.tv",
+    "xkcd.com",
+    "mrlovenstein.bsky.social",
+    "b0tster.yeag.gay",
+    "jacobgeller.com"
+   ]
+  },
+  {
+   "name": "Housing & Policy",
+   "top_likes": [
+    "atrupar.com",
+    "ronfilipkowski.bsky.social",
+    "thetnholler.bsky.social",
+    "muellershewrote.com",
+    "gtconway.bsky.social",
+    "joncooper-us.bsky.social",
+    "rbreich.bsky.social",
+    "acyn.bsky.social",
+    "markhamillofficial.bsky.social",
+    "meidastouch.com",
+    "mrsbettybowers.bsky.social",
+    "bencollins.bsky.social"
+   ]
+  },
+  {
+   "name": "Furries (NSFW)",
+   "top_likes": [
+    "w0lfertinger666.bsky.social",
+    "mintcashew.bsky.social",
+    "patriciataxxon.bsky.social",
+    "welwraith.bsky.social",
+    "furry-hater.bsky.social",
+    "happyroadkill.bsky.social",
+    "artifyber.xyz",
+    "beetlemoses.bsky.social",
+    "sailorrooscout.bsky.social",
+    "basil-mage.bsky.social",
+    "rawdawgcomics.bsky.social",
+    "squeakitties.bsky.social"
+   ]
+  }
+ ],
+ "tier2": [
+  {
+   "name": "Blue Profs & Retirees",
+   "top_likes": [
+    "thetnholler.bsky.social",
+    "atrupar.com",
+    "muellershewrote.com",
+    "joncooper-us.bsky.social",
+    "ronfilipkowski.bsky.social",
+    "rbreich.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "meidastouch.com",
+    "kackbro.bsky.social",
+    "markhamillofficial.bsky.social",
+    "gtconway.bsky.social",
+    "nothoodlum.bsky.social"
+   ]
+  },
+  {
+   "name": "Bookish Blue Dots",
+   "top_likes": [
+    "thetnholler.bsky.social",
+    "atrupar.com",
+    "muellershewrote.com",
+    "rbreich.bsky.social",
+    "ronfilipkowski.bsky.social",
+    "meidastouch.com",
+    "joncooper-us.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "kackbro.bsky.social",
+    "marcelias.bsky.social",
+    "nothoodlum.bsky.social",
+    "gtconway.bsky.social"
+   ]
+  },
+  {
+   "name": "Animal-Lover Resisters",
+   "top_likes": [
+    "weratedogs.com",
+    "vetcation.com",
+    "rainmaker1973-m.bsky.social",
+    "contemprainn.bsky.social",
+    "lucagalletti.bsky.social",
+    "thetnholler.bsky.social",
+    "niallharbison.bsky.social",
+    "truthseeker59.bsky.social",
+    "omgisme.bsky.social",
+    "bencollins.bsky.social",
+    "muellershewrote.com",
+    "atrupar.com"
+   ]
+  },
+  {
+   "name": "Red-State Blue Dots",
+   "top_likes": [
+    "atrupar.com",
+    "muellershewrote.com",
+    "thetnholler.bsky.social",
+    "ronfilipkowski.bsky.social",
+    "angrystaffer.bsky.social",
+    "meidastouch.com",
+    "marcelias.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "rbreich.bsky.social",
+    "gtconway.bsky.social",
+    "nothoodlum.bsky.social",
+    "joncooper-us.bsky.social"
+   ]
+  },
+  {
+   "name": "Kidlit & Climate Resisters",
+   "top_likes": [
+    "thetnholler.bsky.social",
+    "atrupar.com",
+    "muellershewrote.com",
+    "ronfilipkowski.bsky.social",
+    "meidastouch.com",
+    "kackbro.bsky.social",
+    "nothoodlum.bsky.social",
+    "rbreich.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "miaganga.bsky.social",
+    "gtconway.bsky.social",
+    "joncooper-us.bsky.social"
+   ]
+  },
+  {
+   "name": "Movie-Buff Resisters",
+   "top_likes": [
+    "muellershewrote.com",
+    "atrupar.com",
+    "thetnholler.bsky.social",
+    "ronfilipkowski.bsky.social",
+    "kackbro.bsky.social",
+    "meidastouch.com",
+    "miaganga.bsky.social",
+    "gtconway.bsky.social",
+    "nothoodlum.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "rbreich.bsky.social",
+    "joncooper-us.bsky.social"
+   ]
+  },
+  {
+   "name": "Boomer Resisters",
+   "top_likes": [
+    "atrupar.com",
+    "ronfilipkowski.bsky.social",
+    "muellershewrote.com",
+    "thetnholler.bsky.social",
+    "meidastouch.com",
+    "nothoodlum.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "gtconway.bsky.social",
+    "cwebbonline.com",
+    "rbreich.bsky.social",
+    "carlquintanilla.bsky.social",
+    "angrystaffer.bsky.social"
+   ]
+  },
+  {
+   "name": "Video-Essay Gamers",
+   "top_likes": [
+    "theonion.com",
+    "junlper.beer",
+    "beetlemoses.bsky.social",
+    "hausofdecline.bsky.social",
+    "ladyemily.nebula.tv",
+    "antlervel.vet",
+    "jtp.bsky.social",
+    "papapishu.bsky.social",
+    "headfallsoff.com",
+    "jacobgeller.com",
+    "shaunvids.bsky.social",
+    "brendelbored.bsky.social"
+   ]
+  },
+  {
+   "name": "Rhythm & VTuber Gamers",
+   "top_likes": [
+    "aidenr0.bsky.social",
+    "gooseworx.bsky.social",
+    "unicouniuni3.bsky.social",
+    "beetlemoses.bsky.social",
+    "b0tster.yeag.gay",
+    "tuyoki.bsky.social",
+    "glitchprod.com",
+    "w0lfertinger666.bsky.social",
+    "dailybunnies.bsky.social",
+    "alexrochonva.bsky.social",
+    "theonion.com",
+    "junlper.beer"
+   ]
+  },
+  {
+   "name": "BreadTube Trans",
+   "top_likes": [
+    "contrapoints.bsky.social",
+    "beetlemoses.bsky.social",
+    "junlper.beer",
+    "theonion.com",
+    "ladyemily.nebula.tv",
+    "theabigailthorn.bsky.social",
+    "jacobgeller.com",
+    "aidenr0.bsky.social",
+    "unicouniuni3.bsky.social",
+    "jtp.bsky.social",
+    "mrlovenstein.bsky.social",
+    "dieworkwear.bsky.social"
+   ]
+  },
+  {
+   "name": "Hank Green Nerds",
+   "top_likes": [
+    "xkcd.com",
+    "fieldexplores.bsky.social",
+    "theonion.com",
+    "techconnectify.bsky.social",
+    "beetlemoses.bsky.social",
+    "mrlovenstein.bsky.social",
+    "depthsofwikipedia.bsky.social",
+    "hankgreen.bsky.social",
+    "foxes-in-love.bsky.social",
+    "willquinnart.bsky.social",
+    "mariobrothblog.bsky.social",
+    "nyazsche.bsky.social"
+   ]
+  },
+  {
+   "name": "Law & Policy Wonks",
+   "top_likes": [
+    "jamellebouie.net",
+    "kevinmkruse.bsky.social",
+    "atrupar.com",
+    "kenwhite.bsky.social",
+    "rincewind.run",
+    "mtsw.bsky.social",
+    "bencollins.bsky.social",
+    "whstancil.bsky.social",
+    "volts.wtf",
+    "parkermolloy.com",
+    "adamserwer.bsky.social",
+    "owillis.bsky.social"
+   ]
+  },
+  {
+   "name": "Wonky Hobbyists",
+   "top_likes": [
+    "jamellebouie.net",
+    "bencollins.bsky.social",
+    "rincewind.run",
+    "kevinmkruse.bsky.social",
+    "kenwhite.bsky.social",
+    "darthbluesky.bsky.social",
+    "prisonculture.bsky.social",
+    "scalzi.com",
+    "nameshiv.bsky.social",
+    "theonion.com",
+    "atrupar.com",
+    "marisakabas.bsky.social"
+   ]
+  },
+  {
+   "name": "Academic Lefties",
+   "top_likes": [
+    "jamellebouie.net",
+    "bencollins.bsky.social",
+    "kevinmkruse.bsky.social",
+    "atrupar.com",
+    "kenwhite.bsky.social",
+    "parkermolloy.com",
+    "rincewind.run",
+    "dieworkwear.bsky.social",
+    "theonion.com",
+    "volts.wtf",
+    "mtsw.bsky.social",
+    "marisakabas.bsky.social"
+   ]
+  },
+  {
+   "name": "Sports-Media Lefties",
+   "top_likes": [
+    "edsbs.bsky.social",
+    "brendelbored.bsky.social",
+    "lauren.rotatingsandwiches.com",
+    "theonion.com",
+    "normcharlatan.bsky.social",
+    "bencollins.bsky.social",
+    "rodger.bsky.social",
+    "dirtbagqueer.rocks",
+    "cjzero.bsky.social",
+    "minakimes.bsky.social",
+    "coachfinstock.bsky.social",
+    "murderxbryan.bsky.social"
+   ]
+  },
+  {
+   "name": "Posters' Corner",
+   "top_likes": [
+    "junlper.beer",
+    "brendelbored.bsky.social",
+    "bencollins.bsky.social",
+    "cait.bsky.social",
+    "lauren.rotatingsandwiches.com",
+    "jtp.bsky.social",
+    "parkermolloy.com",
+    "theonion.com",
+    "iwriteok.bsky.social",
+    "rincewind.run",
+    "internethippo.bsky.social",
+    "jamellebouie.net"
+   ]
+  },
+  {
+   "name": "Union & Transit Lefties",
+   "top_likes": [
+    "bencollins.bsky.social",
+    "junlper.beer",
+    "theonion.com",
+    "iwriteok.bsky.social",
+    "jamellebouie.net",
+    "katmabu.bsky.social",
+    "atrupar.com",
+    "parkermolloy.com",
+    "mayor.nyc.gov",
+    "dieworkwear.bsky.social",
+    "brendelbored.bsky.social",
+    "cait.bsky.social"
+   ]
+  },
+  {
+   "name": "Footy & Comedy Posters",
+   "top_likes": [
+    "brendelbored.bsky.social",
+    "lauren.rotatingsandwiches.com",
+    "theonion.com",
+    "bencollins.bsky.social",
+    "junlper.beer",
+    "cait.bsky.social",
+    "internethippo.bsky.social",
+    "parkermolloy.com",
+    "jamellebouie.net",
+    "ceej.online",
+    "jonbois.bsky.social",
+    "pixelatedboat.bsky.social"
+   ]
+  },
+  {
+   "name": "Resister Geeks",
+   "top_likes": [
+    "atrupar.com",
+    "ronfilipkowski.bsky.social",
+    "thetnholler.bsky.social",
+    "gtconway.bsky.social",
+    "muellershewrote.com",
+    "joncooper-us.bsky.social",
+    "rbreich.bsky.social",
+    "acyn.bsky.social",
+    "markhamillofficial.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "meidastouch.com",
+    "cwebbonline.com"
+   ]
+  },
+  {
+   "name": "Canadian Resisters",
+   "top_likes": [
+    "atrupar.com",
+    "ronfilipkowski.bsky.social",
+    "thetnholler.bsky.social",
+    "muellershewrote.com",
+    "gtconway.bsky.social",
+    "acyn.bsky.social",
+    "bencollins.bsky.social",
+    "rbreich.bsky.social",
+    "joncooper-us.bsky.social",
+    "whstancil.bsky.social",
+    "governorwalz.mn.gov",
+    "katmabu.bsky.social"
+   ]
+  },
+  {
+   "name": "Wonky Vets & Teachers",
+   "top_likes": [
+    "atrupar.com",
+    "bencollins.bsky.social",
+    "jamellebouie.net",
+    "thetnholler.bsky.social",
+    "whstancil.bsky.social",
+    "dieworkwear.bsky.social",
+    "katmabu.bsky.social",
+    "kevinmkruse.bsky.social",
+    "rbreich.bsky.social",
+    "muellershewrote.com",
+    "ronfilipkowski.bsky.social",
+    "mayor.nyc.gov"
+   ]
+  },
+  {
+   "name": "Bookish Snark",
+   "top_likes": [
+    "dieworkwear.bsky.social",
+    "astrokatie.com",
+    "weratedogs.com",
+    "scalzi.com",
+    "theonion.com",
+    "bencollins.bsky.social",
+    "rincewind.run",
+    "jamellebouie.net",
+    "mayor.nyc.gov",
+    "kenwhite.bsky.social",
+    "kevinmkruse.bsky.social",
+    "marisakabas.bsky.social"
+   ]
+  },
+  {
+   "name": "Design & Law Snark",
+   "top_likes": [
+    "jamellebouie.net",
+    "bencollins.bsky.social",
+    "dieworkwear.bsky.social",
+    "theonion.com",
+    "parkermolloy.com",
+    "kevinmkruse.bsky.social",
+    "atrupar.com",
+    "iwriteok.bsky.social",
+    "junlper.beer",
+    "rincewind.run",
+    "brendelbored.bsky.social",
+    "kenwhite.bsky.social"
+   ]
+  },
+  {
+   "name": "Sports Snark",
+   "top_likes": [
+    "edsbs.bsky.social",
+    "theonion.com",
+    "lauren.rotatingsandwiches.com",
+    "brendelbored.bsky.social",
+    "jonbois.bsky.social",
+    "rodger.bsky.social",
+    "bencollins.bsky.social",
+    "internethippo.bsky.social",
+    "ceej.online",
+    "davidjroth.bsky.social",
+    "normcharlatan.bsky.social",
+    "murderxbryan.bsky.social"
+   ]
+  },
+  {
+   "name": "Shitposters' Lounge",
+   "top_likes": [
+    "junlper.beer",
+    "theonion.com",
+    "brendelbored.bsky.social",
+    "iwriteok.bsky.social",
+    "lauren.rotatingsandwiches.com",
+    "bencollins.bsky.social",
+    "internethippo.bsky.social",
+    "dieworkwear.bsky.social",
+    "parkermolloy.com",
+    "cait.bsky.social",
+    "jtp.bsky.social",
+    "nerdjpg.com"
+   ]
+  },
+  {
+   "name": "Makers & F1",
+   "top_likes": [
+    "bencollins.bsky.social",
+    "dieworkwear.bsky.social",
+    "jamellebouie.net",
+    "junlper.beer",
+    "theonion.com",
+    "atrupar.com",
+    "iwriteok.bsky.social",
+    "whstancil.bsky.social",
+    "parkermolloy.com",
+    "katmabu.bsky.social",
+    "brendelbored.bsky.social",
+    "kevinmkruse.bsky.social"
+   ]
+  },
+  {
+   "name": "Comics & Snark",
+   "top_likes": [
+    "bencollins.bsky.social",
+    "katmabu.bsky.social",
+    "atrupar.com",
+    "junlper.beer",
+    "dieworkwear.bsky.social",
+    "theonion.com",
+    "iwriteok.bsky.social",
+    "jamellebouie.net",
+    "parkermolloy.com",
+    "mayor.nyc.gov",
+    "kevinmkruse.bsky.social",
+    "brendelbored.bsky.social"
+   ]
+  },
+  {
+   "name": "Profs & Printmakers",
+   "top_likes": [
+    "jamellebouie.net",
+    "bencollins.bsky.social",
+    "junlper.beer",
+    "iwriteok.bsky.social",
+    "theonion.com",
+    "internethippo.bsky.social",
+    "whstancil.bsky.social",
+    "dieworkwear.bsky.social",
+    "atrupar.com",
+    "katmabu.bsky.social",
+    "parkermolloy.com",
+    "kevinmkruse.bsky.social"
+   ]
+  },
+  {
+   "name": "Wonky Gamer Guys",
+   "top_likes": [
+    "atrupar.com",
+    "kenwhite.bsky.social",
+    "jamellebouie.net",
+    "kevinmkruse.bsky.social",
+    "rincewind.run",
+    "bencollins.bsky.social",
+    "marisakabas.bsky.social",
+    "parkermolloy.com",
+    "darthbluesky.bsky.social",
+    "owillis.bsky.social",
+    "mtsw.bsky.social",
+    "ronfilipkowski.bsky.social"
+   ]
+  },
+  {
+   "name": "Leftist Posters",
+   "top_likes": [
+    "brendelbored.bsky.social",
+    "cait.bsky.social",
+    "jtp.bsky.social",
+    "lauren.rotatingsandwiches.com",
+    "rincewind.run",
+    "parkermolloy.com",
+    "antlervel.vet",
+    "bencollins.bsky.social",
+    "junlper.beer",
+    "theonion.com",
+    "iwriteok.bsky.social",
+    "internethippo.bsky.social"
+   ]
+  },
+  {
+   "name": "Lefty Engineers",
+   "top_likes": [
+    "atrupar.com",
+    "rincewind.run",
+    "parkermolloy.com",
+    "brendelbored.bsky.social",
+    "marisakabas.bsky.social",
+    "diplomatofnight.com",
+    "lauren.rotatingsandwiches.com",
+    "jamellebouie.net",
+    "jtp.bsky.social",
+    "bencollins.bsky.social",
+    "cait.bsky.social",
+    "coachfinstock.bsky.social"
+   ]
+  },
+  {
+   "name": "Wallenstein Posters",
+   "top_likes": [
+    "beijingpalmer.bsky.social",
+    "whstancil.bsky.social",
+    "jamellebouie.net",
+    "proptermalone.bsky.social",
+    "golikehellmachine.com",
+    "rincewind.run",
+    "mikhailgorbaechev.bsky.social",
+    "mtsw.bsky.social",
+    "merovingians.bsky.social",
+    "diplomatofnight.com",
+    "irhottakes.bsky.social",
+    "sodrock.bsky.social"
+   ]
+  },
+  {
+   "name": "Kink Furry Artists",
+   "top_likes": [
+    "w0lfertinger666.bsky.social",
+    "welwraith.bsky.social",
+    "patriciataxxon.bsky.social",
+    "furry-hater.bsky.social",
+    "artifyber.xyz",
+    "mintcashew.bsky.social",
+    "happyroadkill.bsky.social",
+    "squeakitties.bsky.social",
+    "b0tster.yeag.gay",
+    "basil-mage.bsky.social",
+    "jayrnski.bsky.social",
+    "yoshiyamamoto.bsky.social"
+   ]
+  },
+  {
+   "name": "Furry Fursona Den",
+   "top_likes": [
+    "tfiddlerart.bsky.social",
+    "ottertale.bsky.social",
+    "mintcashew.bsky.social",
+    "beetlemoses.bsky.social",
+    "jrjr.esq",
+    "happyroadkill.bsky.social",
+    "theonion.com",
+    "thegoodbyed.bsky.social",
+    "ehudkurzweil.bsky.social",
+    "juiceps.art",
+    "berububs.bsky.social",
+    "wynwardoliver.bsky.social"
+   ]
+  },
+  {
+   "name": "Gamedev Artists",
+   "top_likes": [
+    "junlper.beer",
+    "furry-hater.bsky.social",
+    "jtp.bsky.social",
+    "b0tster.yeag.gay",
+    "hausofdecline.bsky.social",
+    "ladyemily.nebula.tv",
+    "headfallsoff.com",
+    "theonion.com",
+    "antlervel.vet",
+    "cait.bsky.social",
+    "blockedforthispost.bsky.social",
+    "beetlemoses.bsky.social"
+   ]
+  },
+  {
+   "name": "Anime & TTRPG Artists",
+   "top_likes": [
+    "beetlemoses.bsky.social",
+    "theonion.com",
+    "unicouniuni3.bsky.social",
+    "mrlovenstein.bsky.social",
+    "hausofdecline.bsky.social",
+    "aidenr0.bsky.social",
+    "willquinnart.bsky.social",
+    "junlper.beer",
+    "pikat.io",
+    "keezyyoung.bsky.social",
+    "nancycomics.bsky.social",
+    "fieldexplores.bsky.social"
+   ]
+  },
+  {
+   "name": "NSFW Comic Artists",
+   "top_likes": [
+    "aidenr0.bsky.social",
+    "megrocks.com",
+    "andaerz.bsky.social",
+    "lyssahh.bsky.social",
+    "glacierclear.bsky.social",
+    "puddingdraws.bsky.social",
+    "scottmalin.bsky.social",
+    "fugtrup.bsky.social",
+    "squeezable.bsky.social",
+    "b0tster.yeag.gay",
+    "taiyangyu.bsky.social",
+    "searynnsfw.bsky.social"
+   ]
+  },
+  {
+   "name": "Animators & Gamers",
+   "top_likes": [
+    "furry-hater.bsky.social",
+    "jtp.bsky.social",
+    "hausofdecline.bsky.social",
+    "beetlemoses.bsky.social",
+    "aidenr0.bsky.social",
+    "roodypatooti.bsky.social",
+    "nintendooamerica.bsky.social",
+    "w0lfertinger666.bsky.social",
+    "b0tster.yeag.gay",
+    "theonion.com",
+    "junlper.beer",
+    "littlekuriboh.bsky.social"
+   ]
+  },
+  {
+   "name": "Globetrotting Resisters",
+   "top_likes": [
+    "atrupar.com",
+    "ronfilipkowski.bsky.social",
+    "gtconway.bsky.social",
+    "thetnholler.bsky.social",
+    "rbreich.bsky.social",
+    "muellershewrote.com",
+    "joncooper-us.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "markhamillofficial.bsky.social",
+    "meidastouch.com",
+    "acyn.bsky.social",
+    "angrystaffer.bsky.social"
+   ]
+  },
+  {
+   "name": "Canadian Lefties",
+   "top_likes": [
+    "atrupar.com",
+    "mrsbettybowers.bsky.social",
+    "ronfilipkowski.bsky.social",
+    "joncooper-us.bsky.social",
+    "rbreich.bsky.social",
+    "thetnholler.bsky.social",
+    "gtconway.bsky.social",
+    "muellershewrote.com",
+    "meidastouch.com",
+    "markhamillofficial.bsky.social",
+    "marcelias.bsky.social",
+    "nothoodlum.bsky.social"
+   ]
+  },
+  {
+   "name": "Bookish Dog-Lovers",
+   "top_likes": [
+    "weratedogs.com",
+    "contemprainn.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "dieworkwear.bsky.social",
+    "atrupar.com",
+    "mayor.nyc.gov",
+    "bencollins.bsky.social",
+    "markhamillofficial.bsky.social",
+    "muellershewrote.com",
+    "thetnholler.bsky.social",
+    "vetcation.com",
+    "theonion.com"
+   ]
+  },
+  {
+   "name": "Hockey Resisters",
+   "top_likes": [
+    "atrupar.com",
+    "muellershewrote.com",
+    "ronfilipkowski.bsky.social",
+    "thetnholler.bsky.social",
+    "rbreich.bsky.social",
+    "gtconway.bsky.social",
+    "mrsbettybowers.bsky.social",
+    "bencollins.bsky.social",
+    "jamellebouie.net",
+    "kevinmkruse.bsky.social",
+    "joncooper-us.bsky.social",
+    "dieworkwear.bsky.social"
+   ]
+  },
+  {
+   "name": "Crafty Resisters",
+   "top_likes": [
+    "mrsbettybowers.bsky.social",
+    "atrupar.com",
+    "gtconway.bsky.social",
+    "thetnholler.bsky.social",
+    "muellershewrote.com",
+    "rbreich.bsky.social",
+    "ronfilipkowski.bsky.social",
+    "joncooper-us.bsky.social",
+    "altnps.bsky.social",
+    "acyn.bsky.social",
+    "nothoodlum.bsky.social",
+    "markhamillofficial.bsky.social"
+   ]
+  },
+  {
+   "name": "SFF Bookworms",
+   "top_likes": [
+    "scalzi.com",
+    "tkingfisher.com",
+    "weratedogs.com",
+    "rincewind.run",
+    "catsofyore.bsky.social",
+    "cheriepriest.com",
+    "nameshiv.bsky.social",
+    "dieworkwear.bsky.social",
+    "oldenoughtosay.com",
+    "mostlybree.kitrocha.com",
+    "cait.bsky.social",
+    "bodegacats.bsky.social"
+   ]
+  },
+  {
+   "name": "Sci-Fi & Science",
+   "top_likes": [
+    "astrokatie.com",
+    "scalzi.com",
+    "dieworkwear.bsky.social",
+    "theonion.com",
+    "rincewind.run",
+    "weratedogs.com",
+    "tkingfisher.com",
+    "womensartbluesky.bsky.social",
+    "nameshiv.bsky.social",
+    "bencollins.bsky.social",
+    "jamellebouie.net",
+    "mayor.nyc.gov"
+   ]
+  },
+  {
+   "name": "UK Politics Wonks",
+   "top_likes": [
+    "stephenkb.bsky.social",
+    "flyingrodent.bsky.social",
+    "youngvulgarian.marieleconte.com",
+    "fesshole.bsky.social",
+    "anonopin.bsky.social",
+    "samfr.bsky.social",
+    "oldenoughtosay.com",
+    "iandunt.bsky.social",
+    "jamesrball.com",
+    "sloanelysbeth.bsky.social",
+    "zackpolanski.bsky.social",
+    "soozuk.bsky.social"
+   ]
+  },
+  {
+   "name": "Space & Science Nerds",
+   "top_likes": [
+    "xkcd.com",
+    "theonion.com",
+    "hankgreen.bsky.social",
+    "techconnectify.bsky.social",
+    "scalzi.com",
+    "weratedogs.com",
+    "zachweinersmith.bsky.social",
+    "twonks.bsky.social",
+    "depthsofwikipedia.bsky.social",
+    "astrokatie.com",
+    "xkcd-titletext.bsky.social",
+    "georgetakei.bsky.social"
+   ]
+  },
+  {
+   "name": "Atproto Tinkerers",
+   "top_likes": [
+    "norvid-studies.bsky.social",
+    "gracekind.net",
+    "isolyth.dev",
+    "patak.cat",
+    "timkellogg.me",
+    "astrra.space",
+    "ens0.me",
+    "segyges.bsky.social",
+    "dollspace.gay",
+    "pfrazee.com",
+    "emollick.bsky.social",
+    "danabra.mov"
+   ]
+  }
+ ]
+}

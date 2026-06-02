@@ -46,3 +46,6 @@ s50.txt
 t1*.txt
 topic_worksheet.txt
 sw.txt
+cluster_context_*.json
+umap_subtopics_raw.json
+plots/*.png
