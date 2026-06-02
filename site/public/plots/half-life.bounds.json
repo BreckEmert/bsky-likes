@@ -1,9 +1,9 @@
 {
-  "xMin": 31.05406677721136,
-  "xMax": 60931149.970622726,
+  "xMin": 0.0,
+  "xMax": 8.0,
   "yMin": 0.0,
-  "yMax": 3236153.55,
-  "xLog": true,
+  "yMax": 2.0,
+  "xLog": false,
   "yLog": false,
   "imgWidth": 2200,
   "imgHeight": 1300,
