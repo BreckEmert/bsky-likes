@@ -39,6 +39,7 @@ if en_path.exists():
 x = df["x"].to_numpy().astype(np.float64)
 y = df["y"].to_numpy().astype(np.float64)
 handles_all = [h.lower() for h in df["handle"].to_list()]
+dids_all = df["liker_did"].to_list()
 xMin, xMax, yMin, yMax = x.min(), x.max(), y.min(), y.max()
 
 # --- density grid (2D histogram, blurred) ---------------------------------
@@ -122,6 +123,21 @@ xy = np.empty(n * 2, dtype=np.float32)
 xy[0::2] = xs; xy[1::2] = ys
 xy.tofile(OUT / "points.bin")
 colors.tofile(OUT / "colors.bin")
+
+# --- topic colors (2nd color layer): each point by its tier-1 topic, aligned
+#     to the point order. Drives the 'Topics' color mode + legend on the site.
+leg_path = OUT / "topic_legend.json"
+mem_path = config.PROJECT_DIR / "cluster_members_en.parquet"
+if leg_path.exists() and mem_path.exists():
+    legend = {int(L["id"]): L["color"] for L in json.loads(leg_path.read_text())}
+    mem = pl.read_parquet(mem_path)
+    d2t = dict(zip(mem["liker_did"].to_list(), mem["topic"].to_list()))
+    GRAY = [70, 80, 92]
+    dids_sorted = [dids_all[i] for i in order]
+    ctop = np.array([legend.get(int(d2t[d]), GRAY) if d in d2t else GRAY
+                     for d in dids_sorted], dtype=np.uint8)
+    ctop.tofile(OUT / "colors_topic.bin")
+    print(f"[i] colors_topic.bin ({ctop.shape[0]:,} pts, {len(legend)} topics)")
 
 enc = [h.encode("utf-8") for h in handles]
 offs = [0]

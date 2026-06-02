@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
 
+export interface TopicLegend {
+  id: number;
+  name: string;
+  color: [number, number, number];
+  size: number;
+}
+
 export interface ExploreData {
   points: Float32Array; // [x0,y0,x1,y1,...] sorted by followers desc (LOD order)
-  colors: Uint8Array; // [r,g,b,...] parallel
+  colors: Uint8Array; // position-continuum [r,g,b,...] parallel
+  colorsTopic: Uint8Array | null; // per-point tier-1 topic color (2nd layer), or null
+  legend: TopicLegend[] | null; // topic id -> name + color
   handles: string[]; // parallel, lowercased
   index: Map<string, number>;
   n: number;
@@ -27,13 +36,17 @@ export function useExploreData(): ExploreData | null {
   const [data, setData] = useState<ExploreData | null>(null);
   useEffect(() => {
     let cancelled = false;
+    const opt = (url: string, kind: "buf" | "json") =>
+      fetch(url).then((r) => (r.ok ? (kind === "buf" ? r.arrayBuffer() : r.json()) : null)).catch(() => null);
     Promise.all([
       fetch("/explore/points.bin").then((r) => r.arrayBuffer()),
       fetch("/explore/colors.bin").then((r) => r.arrayBuffer()),
       fetch("/explore/handles.bin").then((r) => r.arrayBuffer()),
       fetch("/explore/meta.json").then((r) => r.json()),
+      opt("/explore/colors_topic.bin", "buf"),
+      opt("/explore/topic_legend.json", "json"),
     ])
-      .then(([pb, cb, hb, meta]) => {
+      .then(([pb, cb, hb, meta, ctb, legend]) => {
         if (cancelled) return;
         const handles = parseHandles(hb);
         const index = new Map<string, number>();
@@ -41,6 +54,8 @@ export function useExploreData(): ExploreData | null {
         setData({
           points: new Float32Array(pb),
           colors: new Uint8Array(cb),
+          colorsTopic: ctb ? new Uint8Array(ctb as ArrayBuffer) : null,
+          legend: (legend as TopicLegend[] | null) ?? null,
           handles,
           index,
           n: meta.numPoints,

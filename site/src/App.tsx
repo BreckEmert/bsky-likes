@@ -45,9 +45,11 @@ export default function App() {
           </div>
         </div>
         <div className="plots__label">
-          Explore some premade
+          Explore some
           <br />
-          plots with the data!
+          premade plots
+          <br />
+          with the data!
         </div>
         <div className="plots__main">
           {/* Selecting a tab jumps to the plot so the change is visible. */}

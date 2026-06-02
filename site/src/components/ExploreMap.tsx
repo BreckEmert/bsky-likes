@@ -39,6 +39,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const viewStateRef = useRef<VS | null>(null); // always-latest, for fly-to
   const flyingRef = useRef(false); // true during a fly-to transition (suppress echo/clamp)
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
+  const [colorMode, setColorMode] = useState<"continuum" | "topics">("continuum");
   const initialZoom = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
 
@@ -117,6 +118,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
     const b = data.bounds;
+    const activeColors =
+      colorMode === "topics" && data.colorsTopic ? data.colorsTopic : data.colors;
     const out: unknown[] = [
       // Smooth density-color field behind the dots; fades out as you zoom in.
       new BitmapLayer({
@@ -126,13 +129,31 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
         opacity: bgOpacity,
         updateTriggers: { opacity: [bgOpacity] },
       }),
+      // Soft glow: large, faint dots under the crisp points. Overlap in dense
+      // clusters accumulates -> the cluster shapes softly bloom (structure-led).
+      new ScatterplotLayer({
+        id: "glow",
+        data: {
+          length: numVisible,
+          attributes: {
+            getPosition: { value: data.points, size: 2 },
+            getFillColor: { value: activeColors, size: 3 },
+          },
+        },
+        getRadius: clamp(pointRadius * 3.5, 2.2, 16),
+        radiusUnits: "pixels",
+        radiusMinPixels: 2.2,
+        opacity: 0.06,
+        pickable: false,
+        updateTriggers: { getRadius: [pointRadius], getFillColor: [colorMode] },
+      }),
       new ScatterplotLayer({
         id: "points",
         data: {
           length: numVisible,
           attributes: {
             getPosition: { value: data.points, size: 2 },
-            getFillColor: { value: data.colors, size: 3 },
+            getFillColor: { value: activeColors, size: 3 },
           },
         },
         getRadius: pointRadius,
@@ -142,7 +163,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 220],
-        updateTriggers: { getRadius: [pointRadius] },
+        updateTriggers: { getRadius: [pointRadius], getFillColor: [colorMode] },
       }),
     ];
     const sel = selectedHandle?.toLowerCase();
@@ -198,7 +219,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     labelTier(1, tier1Opacity, 13); // broad: larger text, fades out by ~38%
     labelTier(2, tier2Opacity, 11); // finer: smaller text, fades in ~30-40%
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, tier1Opacity, tier2Opacity]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, tier1Opacity, tier2Opacity, colorMode]);
 
   return (
     <div className="exploremap" ref={ref}>
@@ -255,6 +276,38 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
         />
       </div>
       <ProfileCard handle={selectedHandle} />
+
+      {data && data.colorsTopic && (
+        <div className="exploremap__colormode">
+          <div className="cmode__seg">
+            <button
+              className={colorMode === "continuum" ? "is-on" : ""}
+              onClick={() => setColorMode("continuum")}
+            >
+              Continuum
+            </button>
+            <button
+              className={colorMode === "topics" ? "is-on" : ""}
+              onClick={() => setColorMode("topics")}
+            >
+              Topics
+            </button>
+          </div>
+          {colorMode === "topics" && data.legend && (
+            <ul className="cmode__legend">
+              {data.legend.map((t) => (
+                <li key={t.id}>
+                  <span
+                    className="cmode__swatch"
+                    style={{ background: `rgb(${t.color[0]},${t.color[1]},${t.color[2]})` }}
+                  />
+                  {t.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {hover && (
         <div className="exploremap__tip" style={{ left: hover.x + 12, top: hover.y + 12 }}>
