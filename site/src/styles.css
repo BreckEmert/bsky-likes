@@ -81,52 +81,51 @@ body {
   mask-image: radial-gradient(150px 90px at 0% 0%, #000 25%, transparent 78%);
 }
 
-/* Hover strip along the seam edge; reveals a clickable chevron bar at the left. */
-.seam {
+/* Boundary jump affordance: column-wide layered chevrons, no text/box. The
+   chevron on the OPPOSITE side of the seam fades in when you hover toward it. */
+.seamzone {
   position: absolute;
   left: 0;
-  right: 0;
-  height: 52px;
-  z-index: 5;
-  cursor: pointer;
+  width: 170px;       /* the width of the left label column */
+  height: 74px;       /* ~ the 3 rows of the "Explore some…" text */
+  z-index: 4;
 }
-.seam--down { bottom: 0; }
-/* Constrained to the left label column so it never sits over the tab bar
-   (top-right of the plots section) and block tab clicks. */
-.seam--up { top: 0; right: auto; width: 170px; }
+.seamzone--down { bottom: 0; }  /* map's bottom-left */
+.seamzone--up { top: 0; }       /* plots' top-left */
 
-.seam__bar {
+.seamchev {
   position: absolute;
-  left: 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: rgba(230, 237, 243, 0.9);
-  background: rgba(230, 237, 243, 0.08);
-  border: 1px solid rgba(230, 237, 243, 0.22);
-  backdrop-filter: blur(3px);
+  left: 0;
+  width: 170px;
+  height: 74px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;          /* transparent to events until revealed */
+  transition: opacity 0.22s ease;
 }
-.seam--down .seam__bar { bottom: 11px; transform: translateY(6px); }
-.seam--up .seam__bar { top: 11px; transform: translateY(-6px); }
-.seam:hover .seam__bar { opacity: 1; transform: translateY(0); }
+.seamchev--up { bottom: 0; }     /* in the map (revealed when going up) */
+.seamchev--down { top: 0; }      /* in the plots (revealed when going down) */
+.seamchev.is-on { opacity: 0.5; pointer-events: auto; }
+.seamchev.is-on:hover { opacity: 0.8; }
 
-/* CSS chevron (rotated corner). Points down on the map seam, up on the plots. */
-.seam__chev {
-  width: 7px;
-  height: 7px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
+.seamchev__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-/* Flipped per request: map-seam points up, plots-seam points down. */
-.seam--down .seam__chev { transform: rotate(-135deg) translate(-1px, -1px); }
-.seam--up .seam__chev { transform: rotate(45deg) translate(-1px, -1px); }
+.seamchev__svg polyline {
+  fill: none;
+  stroke: #e6edf3;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.seamchev--up .seamchev__svg { transform: scaleY(-1); } /* point up */
 .plots__label {
   flex: 0 0 170px;
   padding: 28px 18px;

@@ -4,10 +4,26 @@ import { TabBar } from "./components/TabBar.tsx";
 import { PlotPage } from "./components/PlotPage.tsx";
 import { ExploreMap } from "./components/ExploreMap.tsx";
 
+// A column-wide stack of layered chevrons ("<<<" turned to point vertically).
+// White hairlines, no fill/box. Flipped to point up via CSS on the up variant.
+function ChevronStack() {
+  return (
+    <svg className="seamchev__svg" viewBox="0 0 120 60" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="16,9 60,23 104,9" />
+      <polyline points="16,27 60,41 104,27" />
+      <polyline points="16,45 60,59 104,45" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [activeId, setActiveId] = useState(PLOTS[0].id);
   // One global selected handle, shared by the map and every plot (persists).
   const [selectedHandle, setSelectedHandle] = useState<string | null>(null);
+  // Which boundary chevron is revealed: 'down' (shown in the plots, jumps down)
+  // or 'up' (shown in the map, jumps up). Hovering one side reveals the OTHER
+  // side's chevron near the seam.
+  const [seamHover, setSeamHover] = useState<null | "down" | "up">(null);
 
   const active = PLOTS.find((p) => p.id === activeId) ?? PLOTS[0];
 
@@ -24,26 +40,43 @@ export default function App() {
           selectedHandle={selectedHandle}
           onSelectHandle={setSelectedHandle}
         />
-        {/* Hover the bottom edge -> a chevron bar inviting you down to the plots. */}
-        <div className="seam seam--down" onClick={() => scrollTo(plotsRef)}>
-          <div className="seam__bar">
-            <i className="seam__chev" />
-            <span>the premade plots</span>
-            <i className="seam__chev" />
-          </div>
-        </div>
+        {/* Hover zone (map's bottom-left) -> reveals the DOWN chevron in the
+            plots. Underneath the up-chevron, so it's only reached when hidden. */}
+        <div
+          className="seamzone seamzone--down"
+          onMouseEnter={() => setSeamHover("down")}
+          onMouseLeave={() => setSeamHover(null)}
+        />
+        {/* UP chevron lives here (map bottom); shown when hovering the plots. */}
+        <button
+          className={"seamchev seamchev--up" + (seamHover === "up" ? " is-on" : "")}
+          aria-label="back up to the map"
+          onMouseEnter={() => setSeamHover("up")}
+          onMouseLeave={() => setSeamHover(null)}
+          onClick={() => scrollTo(exploreRef)}
+        >
+          <ChevronStack />
+        </button>
       </section>
 
       {/* Below: the premade plots, with a label on the left. */}
       <section className="plots" ref={plotsRef}>
-        {/* Mirror: hover the top edge -> a chevron bar back up to the map. */}
-        <div className="seam seam--up" onClick={() => scrollTo(exploreRef)}>
-          <div className="seam__bar">
-            <i className="seam__chev" />
-            <span>back to the map</span>
-            <i className="seam__chev" />
-          </div>
-        </div>
+        {/* Hover zone (plots' top-left) -> reveals the UP chevron in the map. */}
+        <div
+          className="seamzone seamzone--up"
+          onMouseEnter={() => setSeamHover("up")}
+          onMouseLeave={() => setSeamHover(null)}
+        />
+        {/* DOWN chevron lives here (plots top); shown when hovering the map. */}
+        <button
+          className={"seamchev seamchev--down" + (seamHover === "down" ? " is-on" : "")}
+          aria-label="down to the premade plots"
+          onMouseEnter={() => setSeamHover("down")}
+          onMouseLeave={() => setSeamHover(null)}
+          onClick={() => scrollTo(plotsRef)}
+        >
+          <ChevronStack />
+        </button>
         <div className="plots__label">
           Explore some
           <br />
