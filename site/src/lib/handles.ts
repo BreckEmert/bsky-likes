@@ -21,6 +21,10 @@ export function searchHandles(
   if (q.length < 2) return [];
   const matches: string[] = [];
   for (let i = 0; i < index.length && matches.length < scanCap; i++) {
+    // Skip "handle.invalid" — Bluesky's placeholder for accounts whose handle
+    // didn't resolve at crawl time. It's a short prefix-match for "han/hand/
+    // handle…", so it floods the dropdown mid-type (and isn't a real handle).
+    if (index[i] === "handle.invalid") continue;
     if (index[i].includes(q)) matches.push(index[i]);
   }
   matches.sort((a, b) => {
