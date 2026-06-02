@@ -38,3 +38,11 @@ logs/
 test_run.txt
 health_check.txt
 verify_output.txt
+
+# island-finder intermediates
+island_samples.json
+s48*.txt
+s50.txt
+t1*.txt
+topic_worksheet.txt
+sw.txt

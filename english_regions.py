@@ -209,9 +209,19 @@ for seed in SEED_ISLANDS:
     else:
         print(f"    {seed}: in large cluster ({len(members):,}) -> English-core, skipped", flush=True)
 
+# --- 2D-spatial island blocklist (the robust path): island_finder.py finds
+#     spatially-disconnected islands in the SAME 2D space the map is drawn in,
+#     a human reads 3 bios each and adds foreign ones' DIDs to this blocklist.
+BLOCKLIST = config.PROJECT_DIR / "island_blocklist.json"
+if BLOCKLIST.exists():
+    block = set(json.loads(BLOCKLIST.read_text()))
+    bmask = np.array([d in block for d in dids])
+    alive &= ~bmask
+    print(f"[2c] island blocklist removed {int(bmask.sum()):,} users", flush=True)
+
 en_mask = alive
 print(f"[2] kept {en_mask.sum():,} English; dropped {(~en_mask).sum():,} non-English "
-      f"({lang_tot} + seed islands) ({el()})", flush=True)
+      f"({lang_tot} + seed islands + blocklist) ({el()})", flush=True)
 EN_CACHE.write_text(json.dumps([dids[i] for i in np.where(en_mask)[0]]))
 
 # ---- topical pass on English users ----------------------------------------
