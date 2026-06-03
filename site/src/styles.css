@@ -83,21 +83,23 @@ body {
 
 /* Boundary jump affordance: column-wide layered chevrons, no text/box. The
    chevron on the OPPOSITE side of the seam fades in when you hover toward it. */
+/* Full-width hover band along the seam edge -- the chevron reveals when the
+   mouse is anywhere along the boundary row, not just over the left column. */
 .seamzone {
   position: absolute;
   left: 0;
-  width: 170px;       /* the width of the left label column */
-  height: 74px;       /* ~ the 3 rows of the "Explore some…" text */
+  right: 0;
+  height: 64px;
   z-index: 4;
 }
-.seamzone--down { bottom: 0; }  /* map's bottom-left */
-.seamzone--up { top: 0; }       /* plots' top-left */
+.seamzone--down { bottom: 0; }  /* map's bottom edge */
+.seamzone--up { top: 0; }       /* plots' top edge */
 
 .seamchev {
   position: absolute;
   left: 0;
-  width: 170px;
-  height: 74px;
+  width: 161px;       /* ~5% narrower than the 170px label column */
+  height: 52px;       /* tighter */
   padding: 0;
   border: none;
   background: transparent;
@@ -109,8 +111,8 @@ body {
 }
 .seamchev--up { bottom: 0; }     /* in the map (revealed when going up) */
 .seamchev--down { top: 0; }      /* in the plots (revealed when going down) */
-.seamchev.is-on { opacity: 0.5; pointer-events: auto; }
-.seamchev.is-on:hover { opacity: 0.8; }
+.seamchev.is-on { opacity: 0.4; pointer-events: auto; }
+.seamchev.is-on:hover { opacity: 0.65; }
 
 .seamchev__svg {
   width: 100%;
@@ -120,7 +122,7 @@ body {
 .seamchev__svg polyline {
   fill: none;
   stroke: #e6edf3;
-  stroke-width: 2;
+  stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
@@ -496,11 +498,16 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 2;
-  /* soft-light (not screen) makes the moving light interact with the dots'
-     colour -- it pushes saturation/contrast where it falls instead of just
-     washing white, so it blends in and brings out colour. ~15% fainter. */
+  /* Two stacked passes (same animation): soft-light pushes saturation/contrast
+     where the light falls; a fainter screen pass (below) brightens the dark bg
+     so you can actually SEE where the spotlight is. */
   mix-blend-mode: soft-light;
-  opacity: 0.72;
+  opacity: 0.7;
+}
+/* The 'brighten the black too' pass -- faint additive light. */
+.exploremap__atmosphere--screen {
+  mix-blend-mode: screen;
+  opacity: 0.3;
 }
 /* Gentle global saturation lift on the dot field (reversible: drop this rule). */
 .exploremap canvas:not(.exploremap__atmosphere) {

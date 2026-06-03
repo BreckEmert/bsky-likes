@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PLOTS } from "./plots.config.ts";
 import { TabBar } from "./components/TabBar.tsx";
 import { PlotPage } from "./components/PlotPage.tsx";
@@ -8,10 +8,10 @@ import { ExploreMap } from "./components/ExploreMap.tsx";
 // White hairlines, no fill/box. Flipped to point up via CSS on the up variant.
 function ChevronStack() {
   return (
-    <svg className="seamchev__svg" viewBox="0 0 120 60" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points="16,9 60,23 104,9" />
-      <polyline points="16,27 60,41 104,27" />
-      <polyline points="16,45 60,59 104,45" />
+    <svg className="seamchev__svg" viewBox="0 0 130 38" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="14,6 65,15 116,6" />
+      <polyline points="14,17 65,26 116,17" />
+      <polyline points="14,28 65,37 116,28" />
     </svg>
   );
 }
@@ -20,10 +20,14 @@ export default function App() {
   const [activeId, setActiveId] = useState(PLOTS[0].id);
   // One global selected handle, shared by the map and every plot (persists).
   const [selectedHandle, setSelectedHandle] = useState<string | null>(null);
-  // Which boundary chevron is revealed: 'down' (shown in the plots, jumps down)
-  // or 'up' (shown in the map, jumps up). Hovering one side reveals the OTHER
-  // side's chevron near the seam.
-  const [seamHover, setSeamHover] = useState<null | "down" | "up">(null);
+  // The boundary jump-chevrons. `nearSeam` = mouse is in the boundary row;
+  // `seamZone` = which half you're mostly viewing (from scroll position). You
+  // only get the chevron pointing to the OTHER half -- both appear only at the
+  // awkward ~halfway scroll.
+  const [nearSeam, setNearSeam] = useState(false);
+  const [seamZone, setSeamZone] = useState<"map" | "plots" | "mid">("map");
+  const showDown = nearSeam && seamZone !== "plots"; // map or mid -> offer "down"
+  const showUp = nearSeam && seamZone !== "map"; //     plots or mid -> offer "up"
 
   const active = PLOTS.find((p) => p.id === activeId) ?? PLOTS[0];
 
@@ -31,6 +35,24 @@ export default function App() {
   const plotsRef = useRef<HTMLElement>(null);
   const scrollTo = (r: React.RefObject<HTMLElement>) =>
     r.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // Track where the map/plots boundary sits in the viewport: high up = viewing
+  // the plots, low down = viewing the map, middle = the awkward halfway.
+  useEffect(() => {
+    const onScroll = () => {
+      const ex = exploreRef.current?.getBoundingClientRect();
+      if (!ex) return;
+      const r = ex.bottom / window.innerHeight; // 1 = boundary at viewport bottom
+      setSeamZone(r > 0.7 ? "map" : r < 0.3 ? "plots" : "mid");
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
 
   return (
     <div className="app">
@@ -40,19 +62,18 @@ export default function App() {
           selectedHandle={selectedHandle}
           onSelectHandle={setSelectedHandle}
         />
-        {/* Hover zone (map's bottom-left) -> reveals the DOWN chevron in the
-            plots. Underneath the up-chevron, so it's only reached when hidden. */}
+        {/* Full-width hover band along the map's bottom edge. */}
         <div
           className="seamzone seamzone--down"
-          onMouseEnter={() => setSeamHover("down")}
-          onMouseLeave={() => setSeamHover(null)}
+          onMouseEnter={() => setNearSeam(true)}
+          onMouseLeave={() => setNearSeam(false)}
         />
-        {/* UP chevron lives here (map bottom); shown when hovering the plots. */}
+        {/* UP chevron lives here (map bottom); shown when going up. */}
         <button
-          className={"seamchev seamchev--up" + (seamHover === "up" ? " is-on" : "")}
+          className={"seamchev seamchev--up" + (showUp ? " is-on" : "")}
           aria-label="back up to the map"
-          onMouseEnter={() => setSeamHover("up")}
-          onMouseLeave={() => setSeamHover(null)}
+          onMouseEnter={() => setNearSeam(true)}
+          onMouseLeave={() => setNearSeam(false)}
           onClick={() => scrollTo(exploreRef)}
         >
           <ChevronStack />
@@ -61,18 +82,18 @@ export default function App() {
 
       {/* Below: the premade plots, with a label on the left. */}
       <section className="plots" ref={plotsRef}>
-        {/* Hover zone (plots' top-left) -> reveals the UP chevron in the map. */}
+        {/* Full-width hover band along the plots' top edge. */}
         <div
           className="seamzone seamzone--up"
-          onMouseEnter={() => setSeamHover("up")}
-          onMouseLeave={() => setSeamHover(null)}
+          onMouseEnter={() => setNearSeam(true)}
+          onMouseLeave={() => setNearSeam(false)}
         />
-        {/* DOWN chevron lives here (plots top); shown when hovering the map. */}
+        {/* DOWN chevron lives here (plots top); shown when going down. */}
         <button
-          className={"seamchev seamchev--down" + (seamHover === "down" ? " is-on" : "")}
+          className={"seamchev seamchev--down" + (showDown ? " is-on" : "")}
           aria-label="down to the premade plots"
-          onMouseEnter={() => setSeamHover("down")}
-          onMouseLeave={() => setSeamHover(null)}
+          onMouseEnter={() => setNearSeam(true)}
+          onMouseLeave={() => setNearSeam(false)}
           onClick={() => scrollTo(plotsRef)}
         >
           <ChevronStack />

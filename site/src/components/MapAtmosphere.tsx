@@ -45,7 +45,7 @@ void main(){
 
 const VERT = `attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }`;
 
-export function MapAtmosphere() {
+export function MapAtmosphere({ variant }: { variant?: "soft" | "screen" } = {}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -105,5 +105,11 @@ export function MapAtmosphere() {
     };
   }, []);
 
-  return <canvas ref={ref} className="exploremap__atmosphere" aria-hidden="true" />;
+  return (
+    <canvas
+      ref={ref}
+      className={"exploremap__atmosphere" + (variant === "screen" ? " exploremap__atmosphere--screen" : "")}
+      aria-hidden="true"
+    />
+  );
 }

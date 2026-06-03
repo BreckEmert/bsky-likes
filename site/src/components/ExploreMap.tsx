@@ -265,7 +265,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
           }}
         />
       )}
-      {viewState && <MapAtmosphere />}
+      {viewState && (
+        <>
+          <MapAtmosphere variant="soft" />
+          <MapAtmosphere variant="screen" />
+        </>
+      )}
       {!data && <div className="exploremap__status">loading map…</div>}
 
       <div className="exploremap__search">
