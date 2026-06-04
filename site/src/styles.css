@@ -10,8 +10,10 @@
      (dark grey + plot titles, down to the line below them) -- nothing more. The
      map's bottom slice peeks at the same height. */
   --map-peek: var(--tabbar-h);            /* always-visible slice of the off half */
-  --section-h: calc(100vh - var(--tabbar-h));     /* focused half fills the rest */
-  --slide-y: calc(100vh - 2 * var(--tabbar-h));   /* focus shift = section-h - peek */
+  /* dvh (not vh) so the no-scroll layout fits the *visible* viewport on mobile
+     (vh includes the address-bar area -> bottom tabs would be cut off). */
+  --section-h: calc(100dvh - var(--tabbar-h));     /* focused half fills the rest */
+  --slide-y: calc(100dvh - 2 * var(--tabbar-h));   /* focus shift = section-h - peek */
   /* The section slide is animated and time-matched to the map's camera reframe
      (850ms in ExploreMap), so the screen pans while the map pans. */
   --slide-dur: 0.85s;
@@ -38,6 +40,7 @@ body {
 .app {
   position: relative;
   height: 100vh;
+  height: 100dvh; /* mobile: fit the visible viewport, not incl. the address bar */
   overflow: hidden;
 }
 .stage {
@@ -53,8 +56,9 @@ body {
 .app--map .stage { transform: translateY(0); }
 /* No var() in the transitioned value -> the slide stays on the GPU compositor,
    so it's smooth even while the map's camera fly-to is busy on the main thread.
-   176px = 2 * --tabbar-h. */
+   176px = 2 * --tabbar-h. dvh override (with vh fallback) fits mobile. */
 .app--plots .stage { transform: translateY(calc(176px - 100vh)); }
+.app--plots .stage { transform: translateY(calc(176px - 100dvh)); }
 
 /* Top: the exploration map. */
 .explore {
