@@ -31,7 +31,8 @@ import polars as pl
 from bsky_likes import config
 
 FAN_MIN_LIKES = 15        # a "superfan" must have liked >= this many of an account's posts
-LOYALTY_FLOOR = 20        # loyalty/devotion: need >= this many superfans here to qualify
+SUPERFAN_FLOOR = 10       # loyalty/devotion: need >= this many superfans here to qualify
+#                           (kills "3 of 3 superfans" share flukes; 10 keeps full coverage)
 DISTINCT_FLOOR = 0.10     # distinctiveness: account must be liked by >= 10% of the community
 LIKERATE_MIN_FANS = 30    # like-rate: need >= this many (any) likers here to qualify
 TOP_K = 3                 # "by community" view: top-K per sub
@@ -44,17 +45,17 @@ SITE = ROOT / "site" / "public" / "explore"
 # mini-explanations from one source of truth. `rank` is the column to sort by.
 METRICS = [
     {"id": "loyalty", "label": "Loyalty rate", "rank": "loyaltyScore", "default": True,
-     "blurb": "Accounts whose superfans (15+ likes) are concentrated right here — "
-              "this community is their home base, not just somewhere they’re known."},
+     "blurb": "Accounts with a high percentage of their superfans (15+ likes) in "
+              "this community."},
     {"id": "devotion", "label": "Devotion", "rank": "superfans",
-     "blurb": "The accounts with the most superfans (people who’ve liked 15+ of "
-              "their posts) in this community."},
+     "blurb": "Accounts with the most superfans (15+ likes) in this community "
+              "(the raw-count version of Loyalty rate)."},
     {"id": "distinct", "label": "Distinctiveness", "rank": "lift",
-     "blurb": "Who this community likes far more than the rest of Bluesky does — "
-              "its niche signature taste."},
+     "blurb": "Accounts this community likes at a far higher rate than the rest of "
+              "Bluesky does (highest lift)."},
     {"id": "likerate", "label": "Like-rate", "rank": "likeRate",
-     "blurb": "Whose posts land most reliably here — average likes per post from "
-              "this community (prolific accounts only)."},
+     "blurb": "Accounts with the highest average likes per post from this community "
+              "(must have more posts than the median account)."},
 ]
 
 t0 = time.time()
@@ -230,8 +231,8 @@ def build_variant(rank, floor):
 
 
 FLOORS = {
-    "loyalty": pl.col("superfans") >= 1,   # no hard floor; the blend handles noise
-    "devotion": pl.col("superfans") >= 1,
+    "loyalty": pl.col("superfans") >= SUPERFAN_FLOOR,
+    "devotion": pl.col("superfans") >= SUPERFAN_FLOOR,
     "distinct": pl.col("pen") >= DISTINCT_FLOOR,
     "likerate": (pl.col("uf") >= LIKERATE_MIN_FANS) & (pl.col("npost") >= MED_POST),
 }

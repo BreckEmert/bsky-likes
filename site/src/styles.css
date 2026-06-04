@@ -631,11 +631,11 @@ body {
   font-family: inherit;
   font-size: clamp(15px, 1.7vw, 23px);
   font-weight: 600;
-  color: #5b6675; /* inactive = faded */
+  color: #7e8b9b; /* inactive = faded, but bright enough to read as a switch */
   cursor: pointer;
   transition: color 0.18s ease;
 }
-.maptitle__sub:hover { color: #9aa7b6; }
+.maptitle__sub:hover { color: #aab6c4; }
 .maptitle__sub.is-on { color: #cdd9e6; cursor: default; } /* active = bright */
 
 /* ---- Champions view (the "who owns each tribe" tree) ---- */
