@@ -93,7 +93,9 @@ body {
   z-index: 4;
 }
 .seamzone--down { bottom: 0; }  /* map's bottom edge */
-.seamzone--up { top: 0; }       /* plots' top edge */
+/* Constrain to the left label column only: full-width would overlay the
+   TabBar (which lives at the top of .plots__main) and swallow tab clicks. */
+.seamzone--up { top: 0; right: auto; width: 170px; }  /* plots' top-left */
 
 .seamchev {
   position: absolute;
