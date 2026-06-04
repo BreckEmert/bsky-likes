@@ -24,7 +24,9 @@ from pathlib import Path
 import polars as pl
 from bsky_likes import config
 
-MIN_SUPPORT = 0.06        # champion must be liked by >= 6% of its community
+MIN_SUPPORT = 0.10        # champion must be liked by >= 10% of its community
+#                           (a real "broadly liked" gate; 6% was near-cosmetic,
+#                            20% flips it to famous-only and kills the lower class)
 TOP_K = 3                 # "by community" view: top-K champions per sub (by lift)
 UPPER_FOLLOWERS = 50_000  # >= this -> upper class
 LOWER_FOLLOWERS = 2_000   # < this  -> lower class (middle is in between)

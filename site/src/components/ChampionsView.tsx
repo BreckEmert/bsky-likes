@@ -200,7 +200,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
             </div>
           ) : (
             <div className="champs__tip-r">
-              owns <b>{hover.c.subSize.toLocaleString()}</b> users · likes them{" "}
+              rules <b>{hover.c.subSize.toLocaleString()}</b> users · liked{" "}
               <b>{hover.c.lift}×</b> more than average ·{" "}
               <b>{hover.c.followers.toLocaleString()}</b> followers
             </div>
