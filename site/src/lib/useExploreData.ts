@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { asset } from "./asset.ts";
 
 export interface TopicLegend {
   id: number;
@@ -123,12 +124,12 @@ export function useExploreData(): ExploreData | null {
   useEffect(() => {
     let cancelled = false;
     const opt = (url: string, kind: "buf" | "json") =>
-      fetch(url).then((r) => (r.ok ? (kind === "buf" ? r.arrayBuffer() : r.json()) : null)).catch(() => null);
+      fetch(asset(url)).then((r) => (r.ok ? (kind === "buf" ? r.arrayBuffer() : r.json()) : null)).catch(() => null);
     Promise.all([
-      fetch("/explore/points.bin").then((r) => r.arrayBuffer()),
-      fetch("/explore/colors.bin").then((r) => r.arrayBuffer()),
-      fetch("/explore/handles.bin").then((r) => r.arrayBuffer()),
-      fetch("/explore/meta.json").then((r) => r.json()),
+      fetch(asset("/explore/points.bin")).then((r) => r.arrayBuffer()),
+      fetch(asset("/explore/colors.bin")).then((r) => r.arrayBuffer()),
+      fetch(asset("/explore/handles.bin")).then((r) => r.arrayBuffer()),
+      fetch(asset("/explore/meta.json")).then((r) => r.json()),
       opt("/explore/colors_topic.bin", "buf"),
       opt("/explore/topic_legend.json", "json"),
     ])

@@ -1,5 +1,6 @@
 // Single source of truth for the deck. Adding/removing/reordering a plot =
 // editing this file. Shapes mirror SITE_BUILD_GUIDE.md.
+import { asset } from "./lib/asset.ts";
 
 export type HighlightKind =
   | "deck-scatter"
@@ -34,7 +35,7 @@ export interface PlotConfig {
 // NOTE: image paths currently point at PLACEHOLDER PNGs (the matplotlib output
 // with titles still baked in). They will be replaced by the title-suppressed,
 // transparent export PNGs from bsky_export_web.py. Leaderboards is HTML-only.
-export const PLOTS: PlotConfig[] = [
+const RAW_PLOTS: PlotConfig[] = [
   {
     id: "typical-popularity",
     tabLabel: "Typical Popularity",
@@ -168,3 +169,15 @@ export const PLOTS: PlotConfig[] = [
     highlight: null,
   },
 ];
+
+// Resolve every asset URL (image / bounds / data.*) against the deploy base, so
+// the site works at the domain root OR a sub-path. Authoring above stays as
+// clean "/plots/..." paths.
+export const PLOTS: PlotConfig[] = RAW_PLOTS.map((p) => ({
+  ...p,
+  image: p.image ? asset(p.image) : p.image,
+  bounds: p.bounds ? asset(p.bounds) : p.bounds,
+  data: p.data
+    ? Object.fromEntries(Object.entries(p.data).map(([k, v]) => [k, asset(v)]))
+    : p.data,
+}));

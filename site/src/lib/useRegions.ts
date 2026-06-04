@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { asset } from "./asset.ts";
 
 export interface Region {
   name: string;
@@ -13,7 +14,7 @@ export function useRegions(): Region[] {
   const [regions, setRegions] = useState<Region[]>([]);
   useEffect(() => {
     let cancelled = false;
-    fetch("/explore/regions.json")
+    fetch(asset("/explore/regions.json"))
       .then((r) => r.json())
       .then((d: Region[]) => {
         if (!cancelled) setRegions(d);

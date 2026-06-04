@@ -8,6 +8,7 @@ import { useElementSize } from "../lib/useElementSize.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { ProfileCard } from "./ProfileCard.tsx";
 import { MapAtmosphere } from "./MapAtmosphere.tsx";
+import { asset } from "../lib/asset.ts";
 
 interface Props {
   selectedHandle: string | null;
@@ -210,7 +211,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
       // Smooth density-color field behind the dots; fades out as you zoom in.
       new BitmapLayer({
         id: "density",
-        image: "/explore/density.png",
+        image: asset("/explore/density.png"),
         bounds: [b.xMin, b.yMin, b.xMax, b.yMax],
         opacity: bgOpacity,
         updateTriggers: { opacity: [bgOpacity] },
