@@ -16,15 +16,48 @@ interface Props {
   onSelectHandle: (h: string | null) => void;
 }
 
-// "Who owns each tribe?" — a 2-level tree: tier-1 topics (rows) split into the
-// champions that dominate each sub-community (cells, width ∝ community size,
-// colored by class). Champions are picked by LIFT (distinctiveness), so the
-// middle/lower-class "workhorses" surface instead of the usual megastars.
+// The lead stat in the tooltip, phrased for the active lens (each lens ranks by a
+// different thing, so we surface that thing first).
+function leadStat(metric: string, c: Champion) {
+  const pct = Math.round(c.share * 100);
+  switch (metric) {
+    case "loyalty":
+      return (
+        <>
+          <b>{pct}%</b> of their superfans are right here ({c.superfans.toLocaleString()} of{" "}
+          {c.globalSuperfans.toLocaleString()})
+        </>
+      );
+    case "devotion":
+      return (
+        <>
+          <b>{c.superfans.toLocaleString()}</b> superfans here (liked 15+ of their posts)
+        </>
+      );
+    case "distinct":
+      return (
+        <>
+          liked <b>{c.lift}×</b> more than the rest of Bluesky
+        </>
+      );
+    case "likerate":
+      return (
+        <>
+          <b>{c.likeRate.toLocaleString()}</b> avg likes per post from this community
+        </>
+      );
+    default:
+      return null;
+  }
+}
+
+// "Who does each community rally around?" — switch the LENS (loyalty / devotion /
+// distinctiveness / like-rate) and the LAYOUT (by topic / by community). Each lens
+// is a precomputed variant; the radio just swaps the data.
 export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }: Props) {
   const data = useChampions();
   const [hover, setHover] = useState<{ c: Champion; x: number; y: number } | null>(null);
-  // "topic" = champions grouped under their broad topic (cells ∝ size);
-  // "community" = one row per fine-grained sub-community + its champion.
+  const [metric, setMetric] = useState<string | null>(null);
   const [layout, setLayout] = useState<"topic" | "community">("topic");
 
   if (!data) {
@@ -39,8 +72,14 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
     );
   }
 
-  const total = data.classCounts.upper + data.classCounts.middle + data.classCounts.lower;
-  const midPct = total ? Math.round((data.classCounts.middle / total) * 100) : 0;
+  const activeId =
+    metric ?? data.metrics.find((m) => m.default)?.id ?? data.metrics[0].id;
+  const active = data.variants[activeId];
+  const blurb = data.metrics.find((m) => m.id === activeId)?.blurb ?? "";
+
+  const cc = active.classCounts;
+  const total = cc.upper + cc.middle + cc.lower || 1;
+  const nonFamousPct = Math.round(((cc.middle + cc.lower) / total) * 100);
 
   return (
     <div className="champs">
@@ -48,39 +87,47 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
 
       <div className="champs__head">
         <div className="champs__intro">
-          <div className="champs__title">
-            Each community’s champion — the account it loves far more than the
-            rest of Bluesky does.
-          </div>
-          <div className="champs__tech">
-            Found by <em>lift</em>: a community’s like-rate for an account ÷ the
-            whole site’s, so its true favorites outrank the megastars everyone
-            likes.
-          </div>
+          <div className="champs__title">Who does each community rally around?</div>
           <div className="champs__stat">
-            <span className="champs__midchip">Middle-class workhorses</span> —{" "}
-            {midPct}% of tribes are owned by an account that isn’t famous (under
-            50k followers).
+            <span className="champs__midchip">{nonFamousPct}% non-famous</span> — under
+            this lens, that share of communities are led by an account with under 50k
+            followers.
           </div>
-          <div className="champs__toggle" role="tablist" aria-label="Champions layout">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={layout === "topic"}
-              className={"champs__toggle-b" + (layout === "topic" ? " is-on" : "")}
-              onClick={() => setLayout("topic")}
-            >
-              By topic
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={layout === "community"}
-              className={"champs__toggle-b" + (layout === "community" ? " is-on" : "")}
-              onClick={() => setLayout("community")}
-            >
-              By community
-            </button>
+          <div className="champs__controls">
+            <div className="champs__toggle" role="tablist" aria-label="Ranking lens">
+              {data.metrics.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={m.id === activeId}
+                  className={"champs__toggle-b" + (m.id === activeId ? " is-on" : "")}
+                  onClick={() => setMetric(m.id)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <div className="champs__toggle" role="tablist" aria-label="Champions layout">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={layout === "topic"}
+                className={"champs__toggle-b" + (layout === "topic" ? " is-on" : "")}
+                onClick={() => setLayout("topic")}
+              >
+                By topic
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={layout === "community"}
+                className={"champs__toggle-b" + (layout === "community" ? " is-on" : "")}
+                onClick={() => setLayout("community")}
+              >
+                By community
+              </button>
+            </div>
           </div>
         </div>
         <ul className="champs__legend">
@@ -93,21 +140,11 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
         </ul>
       </div>
 
-      <div className="champs__caption">
-        {layout === "topic" ? (
-          <>Each bar is a sub-community’s champion; widest = biggest community.</>
-        ) : (
-          <>
-            Sorted by <b>lift</b> — how much more this community likes them than the
-            rest of Bluesky (so a niche favorite can outrank a bigger star who’s
-            liked everywhere).
-          </>
-        )}
-      </div>
+      <div className="champs__caption">{blurb}</div>
 
       <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
         {layout === "topic"
-          ? data.topics.map((t) => {
+          ? active.topics.map((t) => {
               const sum = t.champions.reduce((s, c) => s + c.subSize, 0) || 1;
               // widest bar (biggest community) first, left-to-right
               const cells = [...t.champions].sort((a, b) => b.subSize - a.subSize);
@@ -123,8 +160,6 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                   <div className="champrow__cells">
                     {cells.map((c, i) => (
                       <button
-                        // a handle can champion two sub-communities (e.g. tobyfox),
-                        // so the index keeps the key unique.
                         key={c.handle + "-" + i}
                         className={"champcell champcell--" + c.class}
                         style={{ ["--cw" as string]: String(c.subSize / sum) }}
@@ -141,49 +176,35 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                 </div>
               );
             })
-          : data.communities.map((co) => {
-              // bar width ∝ lift, so the (lift-based) ranking is visible & monotonic
-              const liftSum = co.champions.reduce((s, ch) => s + ch.lift, 0) || 1;
+          : active.communities.map((co) => {
+              // by-community bar ∝ the active lens's ranking value, so the order is visible
+              const vsum = co.champions.reduce((s, ch) => s + ch.value, 0) || 1;
               return (
-              <div className="champrow" key={co.sub}>
-                <div
-                  className="champrow__topic champrow__topic--wide"
-                  style={{ color: `rgb(${co.color[0]},${co.color[1]},${co.color[2]})` }}
-                  title={co.name}
-                >
-                  <span className="champrow__name">{co.name || "Unnamed community"}</span>
-                  <span className="champrow__size">{co.subSize.toLocaleString()} users</span>
-                </div>
-                <div className="champrow__cells">
-                  {co.champions.map((ch, i) => {
-                    // reshape into the Champion the shared tooltip expects
-                    const c: Champion = {
-                      handle: ch.handle,
-                      subName: co.name,
-                      subSize: co.subSize,
-                      supporters: ch.supporters,
-                      lift: ch.lift,
-                      followers: ch.followers,
-                      class: ch.class,
-                    };
-                    return (
+                <div className="champrow" key={co.sub}>
+                  <div
+                    className="champrow__topic champrow__topic--wide"
+                    style={{ color: `rgb(${co.color[0]},${co.color[1]},${co.color[2]})` }}
+                    title={co.name}
+                  >
+                    <span className="champrow__name">{co.name || "Unnamed community"}</span>
+                    <span className="champrow__size">{co.subSize.toLocaleString()} users</span>
+                  </div>
+                  <div className="champrow__cells">
+                    {co.champions.map((ch, i) => (
                       <button
                         key={ch.handle + "-" + i}
                         className={"champcell champcell--" + ch.class}
-                        style={{ ["--cw" as string]: String(ch.lift / liftSum) }}
-                        onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
-                        onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
+                        style={{ ["--cw" as string]: String(ch.value / vsum) }}
+                        onMouseEnter={(e) => setHover({ c: ch, x: e.clientX, y: e.clientY })}
+                        onMouseMove={(e) => setHover({ c: ch, x: e.clientX, y: e.clientY })}
                         onMouseLeave={() => setHover(null)}
                         onClick={() => onSelectHandle(ch.handle)}
                       >
-                        <span className="champcell__h">
-                          @{ch.handle.replace(/\.bsky\.social$/, "")}
-                        </span>
+                        <span className="champcell__h">@{ch.handle.replace(/\.bsky\.social$/, "")}</span>
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
               );
             })}
       </div>
@@ -194,7 +215,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
           style={{
             // clamp to the viewport so rightmost/bottom champions aren't offscreen
             left: Math.min(hover.x + 14, window.innerWidth - 332),
-            top: Math.min(hover.y + 14, window.innerHeight - 90),
+            top: Math.min(hover.y + 14, window.innerHeight - 96),
           }}
         >
           <div className="champs__tip-h">@{hover.c.handle}</div>
@@ -203,23 +224,10 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
               {layout === "community" ? "in" : "champion of"} {hover.c.subName}
             </div>
           )}
-          {layout === "community" ? (
-            // per-champion metrics that actually differ within a community:
-            // how many of its members like them, lift, and their fame
-            <div className="champs__tip-r">
-              liked <b>{hover.c.lift}×</b> more than the rest of Bluesky · liked by{" "}
-              <b>{Math.round((hover.c.supporters / hover.c.subSize) * 100)}%</b> of
-              the community ({hover.c.supporters.toLocaleString()} of{" "}
-              {hover.c.subSize.toLocaleString()}) ·{" "}
-              <b>{hover.c.followers.toLocaleString()}</b> followers
-            </div>
-          ) : (
-            <div className="champs__tip-r">
-              rules <b>{hover.c.subSize.toLocaleString()}</b> users · liked{" "}
-              <b>{hover.c.lift}×</b> more than average ·{" "}
-              <b>{hover.c.followers.toLocaleString()}</b> followers
-            </div>
-          )}
+          <div className="champs__tip-r">
+            {leadStat(activeId, hover.c)} · <b>{hover.c.followers.toLocaleString()}</b>{" "}
+            followers
+          </div>
         </div>
       )}
 

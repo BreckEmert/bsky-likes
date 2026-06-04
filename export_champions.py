@@ -1,20 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-export_champions.py — find each community's CHAMPION: the account it likes far
-more than the rest of Bluesky does. Chosen by LIFT, not raw popularity, so even
-niche sub-communities get a distinctive owner instead of the same handful of
-megastars winning every group.
+export_champions.py — for each community, find the accounts it rallies around,
+under FOUR interchangeable lenses (the "champions" map tab lets the viewer switch
+between them live):
 
-    lift(account A, community C) =
-        (share of C's members who like A)  /  (share of ALL clustered users who like A)
+  - loyalty      share of an account's superfans that live in THIS community
+                 (superfan = liked >= FAN_MIN_LIKES of their posts). High = this
+                 community is the account's home base.  [DEFAULT]
+  - devotion     raw count of superfans here. "Who does this community love most."
+  - distinct     LIFT: community like-rate / whole-site like-rate. Surfaces niche
+                 signature accounts the rest of Bluesky doesn't care about.
+  - likerate     average likes-per-post from this community (prolific accounts
+                 only). "Whose posts land reliably here." Controls for volume.
 
-A globally-huge account has a big denominator -> low lift -> loses. A niche
-account adored by C -> high lift -> wins. So at any granularity you surface the
-real owners. Champions are then bucketed by follower count into upper / middle /
-lower "class" (the middle-class ones are the workhorses: they own a community
-without being famous).
+Every like is counted ONLY from members of the account's own community, so a
+megastar never wins a community its own people don't actually engage with.
 
-Writes site/public/explore/champions.json for the "champions" map tab.
+Each lens is fully preset (no tunable knobs). We precompute all four as small
+"variants" and ship them in site/public/explore/champions.json; the frontend
+radio just swaps between them. Champions are also bucketed by follower count into
+upper / middle / lower "class".
+
 Run:  python export_champions.py
 """
 import json
@@ -24,14 +30,32 @@ from pathlib import Path
 import polars as pl
 from bsky_likes import config
 
-MIN_SUPPORT = 0.10        # champion must be liked by >= 10% of its community
-#                           (a real "broadly liked" gate; 6% was near-cosmetic,
-#                            20% flips it to famous-only and kills the lower class)
-TOP_K = 3                 # "by community" view: top-K champions per sub (by lift)
+FAN_MIN_LIKES = 15        # a "superfan" must have liked >= this many of an account's posts
+LOYALTY_FLOOR = 20        # loyalty/devotion: need >= this many superfans here to qualify
+DISTINCT_FLOOR = 0.10     # distinctiveness: account must be liked by >= 10% of the community
+LIKERATE_MIN_FANS = 30    # like-rate: need >= this many (any) likers here to qualify
+TOP_K = 3                 # "by community" view: top-K per sub
 UPPER_FOLLOWERS = 50_000  # >= this -> upper class
 LOWER_FOLLOWERS = 2_000   # < this  -> lower class (middle is in between)
 ROOT = Path(__file__).parent
 SITE = ROOT / "site" / "public" / "explore"
+
+# Lens metadata travels with the data so the frontend renders the picker +
+# mini-explanations from one source of truth. `rank` is the column to sort by.
+METRICS = [
+    {"id": "loyalty", "label": "Loyalty rate", "rank": "loyaltyScore", "default": True,
+     "blurb": "Accounts whose superfans (15+ likes) are concentrated right here — "
+              "this community is their home base, not just somewhere they’re known."},
+    {"id": "devotion", "label": "Devotion", "rank": "superfans",
+     "blurb": "The accounts with the most superfans (people who’ve liked 15+ of "
+              "their posts) in this community."},
+    {"id": "distinct", "label": "Distinctiveness", "rank": "lift",
+     "blurb": "Who this community likes far more than the rest of Bluesky does — "
+              "its niche signature taste."},
+    {"id": "likerate", "label": "Like-rate", "rank": "likeRate",
+     "blurb": "Whose posts land most reliably here — average likes per post from "
+              "this community (prolific accounts only)."},
+]
 
 t0 = time.time()
 
@@ -40,48 +64,87 @@ sub = pl.read_parquet(config.PROJECT_DIR / "cluster_members_sub.parquet").select
 top = pl.read_parquet(config.PROJECT_DIR / "cluster_members_en.parquet").select(["liker_did", "topic"])
 mem = sub.join(top, on="liker_did", how="inner")
 N = mem.height
-sub_sizes = mem.group_by("sub").agg(pl.len().alias("sub_size"))
+sub_sizes = mem.group_by("sub").agg(pl.len().alias("ss"))
 sub_topic = (
     mem.group_by(["sub", "topic"]).agg(pl.len().alias("n"))
     .sort("n", descending=True).unique("sub", keep="first").select(["sub", "topic"])
 )
 print(f"{N:,} clustered users, {sub_sizes.height} sub-communities ({time.time()-t0:.0f}s)", flush=True)
 
-# --- streaming join: unique supporters per (sub, liked-author) ---
 cmap = mem.select(["liker_did", "sub"])
 likes = pl.scan_parquet(str(config.LIKES_DIR / "part-*.parquet")).select(["liker_did", "post_uri"])
 posts = pl.scan_parquet(str(config.POSTS_PATH)).select(["post_uri", "post_author_did"])
-sa = (
-    likes.join(cmap.lazy(), on="liker_did", how="inner")
-    .join(posts, on="post_uri", how="inner")
-    .group_by(["sub", "post_author_did"])
-    .agg(pl.col("liker_did").n_unique().alias("supporters"))  # distinct members, not raw likes
+base = likes.join(cmap.lazy(), on="liker_did", how="inner").join(posts, on="post_uri", how="inner")
+
+# per (sub, author): unique likers (any like) + total likes
+agg = (
+    base.group_by(["sub", "post_author_did"])
+    .agg(pl.col("liker_did").n_unique().alias("uf"), pl.len().alias("tl"))
     .collect(engine="streaming")
 )
-# each user is in exactly one sub, so summing supporters across subs = global count
-ga = sa.group_by("post_author_did").agg(pl.col("supporters").sum().alias("global_supporters"))
-print(f"likee join done: {sa.height:,} (sub,author) pairs ({time.time()-t0:.0f}s)", flush=True)
-
-# --- lift, then the champion per sub (highest lift clearing the support floor) ---
-sa = (
-    sa.join(sub_sizes, on="sub")
-    .join(ga, on="post_author_did")
-    .with_columns(
-        (pl.col("supporters") / pl.col("sub_size")).alias("penetration"),
-    )
-    .with_columns(
-        (pl.col("penetration") / (pl.col("global_supporters") / N)).alias("lift"),
-    )
-    .filter(pl.col("penetration") >= MIN_SUPPORT)
+# per (sub, author): superfans = distinct members who liked >= FAN_MIN_LIKES of their posts
+sf = (
+    base.group_by(["sub", "post_author_did", "liker_did"]).agg(pl.len().alias("np"))
+    .filter(pl.col("np") >= FAN_MIN_LIKES)
+    .group_by(["sub", "post_author_did"]).agg(pl.len().alias("superfans"))
+    .collect(engine="streaming")
 )
-champ = sa.sort("lift", descending=True).unique("sub", keep="first")
+# author post volume (for like-rate)
+npost = posts.group_by("post_author_did").agg(pl.len().alias("npost")).collect(engine="streaming")
+print(f"aggregations done ({time.time()-t0:.0f}s)", flush=True)
 
-# --- attach handle + follower count + topic ---
+# --- assemble the master per-(sub, author) stats table ---
 users = pl.read_parquet(config.USERS_PATH, columns=["did", "handle", "followers_count"]).unique("did")
-champ = (
-    champ.join(users, left_on="post_author_did", right_on="did", how="left")
+d = (
+    agg.join(sf, on=["sub", "post_author_did"], how="left")
+    .join(npost, on="post_author_did", how="left")
+    .join(sub_sizes, on="sub")
     .join(sub_topic, on="sub", how="left")
+    .join(users, left_on="post_author_did", right_on="did", how="left")
+    .filter(pl.col("handle").is_not_null())          # drop deleted/unresolved accounts
+    .with_columns(pl.col("superfans").fill_null(0))
 )
+# global superfans per author (sum across communities) -> loyalty denominator
+gsf = d.group_by("post_author_did").agg(pl.col("superfans").sum().alias("gsf"))
+# global unique likers per author -> lift denominator
+guf = d.group_by("post_author_did").agg(pl.col("uf").sum().alias("guf"))
+d = d.join(gsf, on="post_author_did").join(guf, on="post_author_did")
+d = d.with_columns([
+    pl.when(pl.col("gsf") > 0).then(pl.col("superfans") / pl.col("gsf")).otherwise(0.0).alias("share"),
+    (pl.col("uf") / pl.col("ss")).alias("pen"),
+    (pl.col("tl") / pl.col("npost")).alias("likeRate"),
+])
+d = d.with_columns((pl.col("pen") / (pl.col("guf") / N)).alias("lift"))
+# loyalty = concentration (share) tempered by substance (log of superfans), so a
+# devoted home community wins without a hard floor: tiny accounts score ~0, and it
+# keeps full coverage + recognizable pillars (codetard, gracekind) instead of the
+# either/or a fixed superfan floor forces.
+d = d.with_columns((pl.col("share") * (pl.col("superfans") + 1).log()).alias("loyaltyScore"))
+MED_POST = float(d.filter(pl.col("uf") >= LIKERATE_MIN_FANS)["npost"].median())
+print(f"master table: {d.height:,} (sub,author) rows; median posts={MED_POST:.0f} ({time.time()-t0:.0f}s)", flush=True)
+
+# --- tier-2 sub-community names (e.g. "Atproto Tinkerers"), matched the same way
+#     the map's tier-1 legend is: greedy overlap of each cluster's top-liked authors
+#     with names_reference. cluster_context_t2 ids == the `sub` ids. ---
+ref2 = json.loads((ROOT / "names_reference.json").read_text(encoding="utf-8"))["tier2"]
+ctx2 = {x["id"]: x for x in json.loads((ROOT / "cluster_context_t2.json").read_text(encoding="utf-8"))}
+_sig = {r["name"]: set(r["top_likes"]) for r in ref2}
+_pairs = []
+for _cid, _c in ctx2.items():
+    _L = set(b["handle"] for b in _c["likes"][:14])
+    for _nm, _tl in _sig.items():
+        _pairs.append((len(_L & _tl), _cid, _nm))
+_pairs.sort(reverse=True)
+_uc, _un, sub_name = set(), set(), {}
+for _ov, _cid, _nm in _pairs:
+    if _cid in _uc or _nm in _un:
+        continue
+    sub_name[_cid] = _nm
+    _uc.add(_cid)
+    _un.add(_nm)
+
+legend = json.loads((ROOT / "topic_legend.json").read_text(encoding="utf-8"))
+topic_meta = {t["id"]: t for t in legend}
 
 
 def klass(f):
@@ -94,131 +157,101 @@ def klass(f):
     return "lower"
 
 
-# --- topic names + colors (from the map's legend) ---
-legend = json.loads((ROOT / "topic_legend.json").read_text(encoding="utf-8"))
-topic_meta = {t["id"]: t for t in legend}
-
-# --- finer-grained tier-2 sub-community names (e.g. "Atproto Tinkerers"). Matched
-#     exactly the way the map's tier-1 legend is: greedy overlap of each cluster's
-#     top-liked authors with the saved names_reference signatures, so the labels
-#     stay in sync with the map. cluster_context_t2 ids == the `sub` ids here. ---
-ref2 = json.loads((ROOT / "names_reference.json").read_text(encoding="utf-8"))["tier2"]
-ctx2 = {x["id"]: x for x in json.loads((ROOT / "cluster_context_t2.json").read_text(encoding="utf-8"))}
-_sig = {r["name"]: set(r["top_likes"]) for r in ref2}
-_pairs = []
-for _cid, _c in ctx2.items():
-    _L = set(b["handle"] for b in _c["likes"][:14])
-    for _nm, _tl in _sig.items():
-        _pairs.append((len(_L & _tl), _cid, _nm))
-_pairs.sort(reverse=True)
-_usedc, _usedn, sub_name = set(), set(), {}
-for _ov, _cid, _nm in _pairs:
-    if _cid in _usedc or _nm in _usedn:
-        continue
-    sub_name[_cid] = _nm
-    _usedc.add(_cid)
-    _usedn.add(_nm)
-
-topics: dict = {}
-counts = {"upper": 0, "middle": 0, "lower": 0}
-for r in champ.sort("lift", descending=True).to_dicts():
-    if not r.get("handle"):
-        continue
+def champ_dict(r):
     f = r.get("followers_count")
-    cl = klass(f)
-    counts[cl] += 1
-    tid = r.get("topic")
-    tm = topic_meta.get(tid, {})
-    t = topics.setdefault(
-        tid,
-        {"topic": tid, "name": tm.get("name", f"Topic {tid}"),
-         "color": tm.get("color", [140, 140, 140]), "champions": []},
-    )
-    t["champions"].append({
+    return {
         "handle": r["handle"],
         "subName": sub_name.get(int(r["sub"]), ""),
-        "subSize": int(r["sub_size"]),
-        "supporters": int(r["supporters"]),
-        "lift": round(float(r["lift"]), 1),
-        "followers": int(f) if f else 0,
-        "class": cl,
-    })
-
-# One account can win two sub-communities in the same topic -> merge into a
-# single cell (sum the sizes, keep the strongest lift) so it doesn't appear twice.
-for t in topics.values():
-    by_h, deduped = {}, []
-    for c in t["champions"]:
-        if c["handle"] in by_h:
-            e = by_h[c["handle"]]
-            e["subSize"] += c["subSize"]
-            e["supporters"] += c["supporters"]
-            e["lift"] = max(e["lift"], c["lift"])
-            parts = [p for p in e["subName"].split(" + ") if p]
-            if c["subName"] and c["subName"] not in parts:
-                parts.append(c["subName"])
-            e["subName"] = " + ".join(parts)
-        else:
-            by_h[c["handle"]] = c
-            deduped.append(c)
-    t["champions"] = deduped
-counts = {"upper": 0, "middle": 0, "lower": 0}
-for t in topics.values():
-    for c in t["champions"]:
-        counts[c["class"]] += 1
-
-# --- "by community" view: the top-K champions of EACH fine-grained sub, by lift.
-#     (A pure lift threshold doesn't work -- insular subs have hundreds of high-lift
-#     niche accounts while mainstream subs top out near 2x, so a single cutoff either
-#     floods or empties. Top-K is bounded and consistent: every sub gets up to K.) ---
-topk = (
-    sa.join(users, left_on="post_author_did", right_on="did", how="left")
-    # drop unresolved/deleted accounts (null handle) BEFORE taking the top K, so a
-    # community always backfills to K real champions instead of silently showing fewer
-    .filter(pl.col("handle").is_not_null())
-    .join(sub_topic, on="sub", how="left")
-    # Rank by LIFT (distinctiveness), NOT raw popularity: penetration alone just
-    # surfaces globally-famous accounts (lift ~1x) that every community likes, not
-    # each community's true favorites. The frontend sizes the bars by lift too, so
-    # the (otherwise counter-intuitive) ranking is visible and monotonic.
-    .sort("lift", descending=True)  # sort LAST so group_by().head() takes top-K by lift
-    .group_by("sub").head(TOP_K)
-)
-communities: dict = {}
-for r in topk.sort("lift", descending=True).to_dicts():
-    if not r.get("handle"):
-        continue
-    sid = int(r["sub"])
-    tid = r.get("topic")
-    co = communities.setdefault(sid, {
-        "sub": sid,
-        "name": sub_name.get(sid, ""),
-        "topic": tid,
-        "color": topic_meta.get(tid, {}).get("color", [140, 140, 140]),
-        "subSize": int(r["sub_size"]),
-        "champions": [],
-    })
-    f = r.get("followers_count")
-    co["champions"].append({
-        "handle": r["handle"],
-        "supporters": int(r["supporters"]),
-        "lift": round(float(r["lift"]), 1),
+        "subSize": int(r["ss"]),
         "followers": int(f) if f else 0,
         "class": klass(f),
-    })
+        "superfans": int(r["superfans"] or 0),
+        "globalSuperfans": int(r["gsf"] or 0),
+        "share": round(float(r["share"] or 0), 4),
+        "lift": round(float(r["lift"] or 0), 1),
+        "likeRate": round(float(r["likeRate"] or 0), 1),
+    }
+
+
+def build_variant(rank, floor):
+    """champion-per-sub (by-topic) + top-K-per-sub (by-community) under one lens."""
+    dd = d.filter(floor)
+
+    # ---- by-topic: each sub's #1, grouped under its tier-1 topic ----
+    champ = dd.sort(rank, descending=True).unique("sub", keep="first")
+    topics = {}
+    counts = {"upper": 0, "middle": 0, "lower": 0}
+    for r in champ.sort(rank, descending=True).to_dicts():
+        c = champ_dict(r)
+        c["value"] = round(float(r[rank] or 0), 4)  # for the by-community bar width
+        counts[c["class"]] += 1
+        tid = r.get("topic")
+        tm = topic_meta.get(tid, {})
+        t = topics.setdefault(tid, {"topic": tid, "name": tm.get("name", f"Topic {tid}"),
+                                    "color": tm.get("color", [140, 140, 140]), "champions": []})
+        t["champions"].append(c)
+    # one handle can win two subs in the same topic -> merge into a single cell
+    for t in topics.values():
+        by_h, deduped = {}, []
+        for c in t["champions"]:
+            if c["handle"] in by_h:
+                e = by_h[c["handle"]]
+                e["subSize"] += c["subSize"]
+                e["superfans"] += c["superfans"]
+                parts = [p for p in e["subName"].split(" + ") if p]
+                if c["subName"] and c["subName"] not in parts:
+                    parts.append(c["subName"])
+                e["subName"] = " + ".join(parts)
+            else:
+                by_h[c["handle"]] = c
+                deduped.append(c)
+        t["champions"] = deduped
+
+    # ---- by-community: each sub's top-K ----
+    topk = dd.sort(rank, descending=True).group_by("sub").head(TOP_K)
+    communities = {}
+    for r in topk.sort(rank, descending=True).to_dicts():
+        sid = int(r["sub"])
+        tid = r.get("topic")
+        co = communities.setdefault(sid, {
+            "sub": sid, "name": sub_name.get(sid, ""), "topic": tid,
+            "color": topic_meta.get(tid, {}).get("color", [140, 140, 140]),
+            "subSize": int(r["ss"]), "champions": [],
+        })
+        cd = champ_dict(r)
+        cd["value"] = round(float(r[rank] or 0), 4)
+        co["champions"].append(cd)
+
+    return {
+        "classCounts": counts,
+        "topics": sorted(topics.values(), key=lambda t: -sum(c["subSize"] for c in t["champions"])),
+        "communities": sorted(communities.values(), key=lambda c: -c["subSize"]),
+    }
+
+
+FLOORS = {
+    "loyalty": pl.col("superfans") >= 1,   # no hard floor; the blend handles noise
+    "devotion": pl.col("superfans") >= 1,
+    "distinct": pl.col("pen") >= DISTINCT_FLOOR,
+    "likerate": (pl.col("uf") >= LIKERATE_MIN_FANS) & (pl.col("npost") >= MED_POST),
+}
+variants = {}
+for m in METRICS:
+    v = build_variant(m["rank"], FLOORS[m["id"]])
+    variants[m["id"]] = v
+    cc = v["classCounts"]
+    tot = sum(cc.values()) or 1
+    print(f"  [{m['id']:9s}] {len(v['communities'])}/49 communities, "
+          f"classes U{cc['upper']}/M{cc['middle']}/L{cc['lower']} "
+          f"({round((cc['middle']+cc['lower'])/tot*100)}% non-famous)", flush=True)
 
 out = {
     "totalUsers": N,
-    "classCounts": counts,
-    "topics": sorted(
-        topics.values(),
-        key=lambda t: -sum(c["subSize"] for c in t["champions"]),
-    ),
-    "communities": sorted(communities.values(), key=lambda c: -c["subSize"]),
+    "fanMinLikes": FAN_MIN_LIKES,
+    "metrics": [{k: m[k] for k in ("id", "label", "blurb")} | ({"default": True} if m.get("default") else {})
+                for m in METRICS],
+    "variants": variants,
 }
 SITE.mkdir(parents=True, exist_ok=True)
 (SITE / "champions.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
-n_ch = sum(len(t["champions"]) for t in out["topics"])
-print(f"[OK] champions.json: {n_ch} champions "
-      f"(upper {counts['upper']} / middle {counts['middle']} / lower {counts['lower']}) "
-      f"({time.time()-t0:.0f}s)", flush=True)
+print(f"[OK] champions.json: {len(METRICS)} lenses ({time.time()-t0:.0f}s)", flush=True)
