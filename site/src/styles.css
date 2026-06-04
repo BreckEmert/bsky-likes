@@ -48,17 +48,11 @@ body {
   left: 0;
   right: 0;
   top: 0;
-  transition: transform var(--slide-dur) var(--slide-ease);
-  will-change: transform;
+  will-change: transform; /* animated via the Web Animations API in App.tsx */
 }
-/* Map focused: top of stack shows; plots' tab bar peeks at the bottom.
-   Plots focused: shift up by --slide-y; map's bottom slice peeks at the top. */
-.app--map .stage { transform: translateY(0); }
-/* No var() in the transitioned value -> the slide stays on the GPU compositor,
-   so it's smooth even while the map's camera fly-to is busy on the main thread.
-   176px = 2 * --tabbar-h. dvh override (with vh fallback) fits mobile. */
-.app--plots .stage { transform: translateY(calc(176px - 100vh)); }
-.app--plots .stage { transform: translateY(calc(176px - 100dvh)); }
+/* The stage transform is set INLINE (App.tsx) in concrete px so it stays
+   GPU-composited and the transition can't be starved by the map's fly-to.
+   Map focused -> translateY(0); plots focused -> translateY(176px - viewportH). */
 
 /* Top: the exploration map. */
 .explore {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PLOTS } from "./plots.config.ts";
 import { TabBar } from "./components/TabBar.tsx";
 import { PlotPage } from "./components/PlotPage.tsx";
@@ -27,11 +27,34 @@ export default function App() {
   // slice keeps your view instead of showing random bottom dots).
   const [view, setView] = useState<"map" | "plots">("map");
 
+  // Slide the stack via the Web Animations API. A CSS transition on .stage gets
+  // starved (frozen) because the constantly-repainting WebGL map inside it keeps
+  // the transform off the GPU compositor; WAA animates the transform on the
+  // compositor explicitly, so it stays smooth even while the map's camera fly-to
+  // pegs the main thread. Concrete px (176 - viewportH) keeps it composited.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const didMount = useRef(false);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const to = view === "plots" ? 176 - window.innerHeight : 0;
+    if (!didMount.current) {
+      didMount.current = true;
+      el.style.transform = `translateY(${to}px)`; // no animation on first paint
+      return;
+    }
+    el.animate(
+      [{ transform: getComputedStyle(el).transform }, { transform: `translateY(${to}px)` }],
+      { duration: 850, easing: "cubic-bezier(.33,0,.2,1)", fill: "forwards" }
+    );
+    el.style.transform = `translateY(${to}px)`; // commit the end state
+  }, [view]);
+
   const active = PLOTS.find((p) => p.id === activeId) ?? PLOTS[0];
 
   return (
     <div className={"app app--" + view}>
-      <div className="stage">
+      <div className="stage" ref={stageRef}>
         {/* Top: the explorable t-SNE field of users. */}
         <section className="explore">
           <ExploreMap

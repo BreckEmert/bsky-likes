@@ -22,10 +22,17 @@ interface Props {
 // When the plots take focus, only the bottom slice of the map stays on screen.
 // We pan the camera DOWN by this many vh (keeping the user's x + zoom) so the
 // content they had centered lands in that slice -- instead of whatever random
-// dots happened to be at the bottom. Sign/size tunable; verified visually.
-// ~35 == (screen-center -> center of the 15vh top slice), so the subject the
-// user had centered lands dead-center in the visible strip.
-const SLICE_SHIFT_VH = 35;
+// dots happened to be at the bottom. When the plots take focus only the map's
+// bottom ~tabbar-tall slice stays visible (at the TOP of the screen). To land
+// the user's focal point in that slice we shift the camera target by the EXACT
+// distance from the canvas center to the slice center: (viewportH - 2*tabbar)/2
+// pixels, converted to world units (negative = y-down). Earlier magic "+35vh"
+// overshot into the empty void below the data.
+const TABBAR_PX = 88; // --tabbar-h (the peek slice height)
+function sliceOffsetWorld(zoom: number): number {
+  const px = (window.innerHeight - 2 * TABBAR_PX) / 2;
+  return -px / Math.pow(2, zoom);
+}
 
 interface VS {
   target: [number, number, number];
@@ -43,6 +50,33 @@ const LOD_BASE = 20000;   // overview ~= one point per occupied cell (even)
 const ZOOM_SPAN = 6;      // max zoom == fit + ZOOM_SPAN (keep in sync below)
 const LOD_FULL_PCT = 63;  // zoom % at which the full point set is shown
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+// Greedy label declutter in WORLD space: place biggest-first, drop any whose box
+// overlaps an already-placed one. Recomputed per zoom (scale = px/world unit),
+// so more labels reappear as you zoom in. Pan-independent (world coords).
+function declutterLabels(labels: Region[], sizeBase: number, zoom: number): Region[] {
+  const scale = Math.pow(2, zoom); // pixels per world unit (OrthographicView)
+  const sorted = [...labels].sort((a, b) => b.size - a.size); // priority: bigger first
+  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const kept: Region[] = [];
+  const PAD = 6; // px breathing room between labels
+  for (const r of sorted) {
+    const fs = clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12);
+    const halfW = (r.name.length * fs * 0.52 + PAD) / 2 / scale;
+    const halfH = (fs + PAD) / 2 / scale;
+    const b = { x0: r.x - halfW, x1: r.x + halfW, y0: r.y - halfH, y1: r.y + halfH };
+    if (!placed.some((p) => b.x0 < p.x1 && b.x1 > p.x0 && b.y0 < p.y1 && b.y1 > p.y0)) {
+      placed.push(b);
+      kept.push(r);
+    }
+  }
+  return kept;
+}
+
+// Hand-placed annotations for the empty "voids" in the like-space -- faint gray
+// italic, overview only. (data coords, tune by eye)
+const VOID_LABELS: { name: string; x: number; y: number }[] = [
+  { name: "The Liminal Void", x: 1.4, y: 4.62 },
+];
 
 export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }: Props) {
   const data = useExploreData();
@@ -94,10 +128,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     savedViewRef.current = { target: [px, py, 0], zoom };
     // Fly there now. While the plots are focused, only a slice of the map shows
     // at the top, so bias y by the slice shift to land the user inside it.
-    const shift =
-      framing === "pretty"
-        ? (SLICE_SHIFT_VH * (window.innerHeight / 100)) / Math.pow(2, zoom)
-        : 0;
+    const shift = framing === "pretty" ? sliceOffsetWorld(zoom) : 0;
     const dest: VS = { target: [px, py + shift, 0], zoom };
     flyingRef.current = true;
     setViewState({
@@ -134,11 +165,21 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     if (framing === "pretty") {
       const cur = viewStateRef.current ?? viewState;
       savedViewRef.current = cur;
-      // Pan down so the user's centered content lands in the visible map slice;
-      // keep their x and zoom (their framing) untouched.
-      const vh = window.innerHeight / 100;
-      const dy = (SLICE_SHIFT_VH * vh) / Math.pow(2, cur.zoom);
-      dest = { target: [cur.target[0], cur.target[1] + dy, 0], zoom: cur.zoom };
+      const sel = selectedHandle?.toLowerCase();
+      if (sel && data.index.has(sel)) {
+        // A profile is searched: center IT in the visible slice. At its (high)
+        // zoom the slice offset is small, so it stays on the data.
+        const i = data.index.get(sel)!;
+        const dy = sliceOffsetWorld(cur.zoom);
+        dest = {
+          target: [data.points[2 * i], data.points[2 * i + 1] + dy, 0],
+          zoom: cur.zoom,
+        };
+      } else {
+        // No search: keep the user's current view (the slice shows the bottom of
+        // what they were looking at). Tunable later if a fixed framing is wanted.
+        dest = cur;
+      }
     } else {
       dest = savedViewRef.current ?? {
         target: [(b.xMin + b.xMax) / 2, (b.yMin + b.yMax) / 2, 0],
@@ -292,8 +333,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     }
     // Region labels in two zoom-gated tiers (broad overview -> finer at ~37%).
     const labelTier = (tier: number, opacity: number, sizeBase: number) => {
-      if (!regions.length || opacity <= 0) return;
-      const rs = regions.filter((r) => (r.tier ?? 1) === tier);
+      if (!regions.length || opacity <= 0 || !viewState) return;
+      const rs = declutterLabels(
+        regions.filter((r) => (r.tier ?? 1) === tier),
+        sizeBase,
+        viewState.zoom
+      );
       if (!rs.length) return;
       out.push(
         new TextLayer({
@@ -316,12 +361,37 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
           getAlignmentBaseline: "center",
           opacity,
           pickable: false,
-          updateTriggers: { opacity: [opacity] },
+          updateTriggers: { opacity: [opacity], getText: [rs.length] },
         })
       );
     };
     labelTier(1, tier1Opacity, 13); // broad: larger text, fades out by ~38%
     labelTier(2, tier2Opacity, 11); // finer: smaller text, fades in ~30-40%
+
+    // Void annotations -- faint gray italic, shown on the overview (with tier 1).
+    if (tier1Opacity > 0 && VOID_LABELS.length) {
+      out.push(
+        new TextLayer({
+          id: "voids",
+          data: VOID_LABELS,
+          getPosition: (d: { x: number; y: number }) => [d.x, d.y],
+          getText: (d: { name: string }) => d.name,
+          getSize: 15,
+          sizeUnits: "pixels",
+          getColor: [150, 161, 173, 178], // gray, ~70% alpha
+          fontFamily: '"DejaVu Sans", system-ui, sans-serif',
+          fontWeight: "italic 400" as unknown as number, // -> "italic 400 ..px.." font string
+          fontSettings: { sdf: true, buffer: 8, radius: 12 },
+          outlineWidth: 4,
+          outlineColor: [6, 9, 14, 160],
+          getTextAnchor: "middle",
+          getAlignmentBaseline: "center",
+          opacity: tier1Opacity,
+          pickable: false,
+          updateTriggers: { opacity: [tier1Opacity] },
+        })
+      );
+    }
     return out;
   }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, tier1Opacity, tier2Opacity, colorMode, glowSpread]);
 
