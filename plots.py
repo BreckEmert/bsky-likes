@@ -666,10 +666,16 @@ HIGHLIGHT_HANDLES = {
     "tszzl.bsky.social",
 }
 
+# Pre-baked gold highlights are OFF for the web build: the site now lights up
+# "15 random accounts you follow" dynamically (client-side) instead. Flip to
+# True to bake the static gold rings/labels back into the PNG.
+BAKE_HIGHLIGHTS = False
+_HL = HIGHLIGHT_HANDLES if BAKE_HIGHLIGHTS else set()
+
 top4000 = author_df_full.nlargest(4000, "total_likes")
 
 # Make sure all highlighted users are in the plotted set, even if outside top 4000
-highlighted = author_df_full[author_df_full["handle"].isin(HIGHLIGHT_HANDLES)]
+highlighted = author_df_full[author_df_full["handle"].isin(_HL)]
 missing = highlighted[~highlighted["handle"].isin(top4000["handle"].values)]
 if len(missing) > 0:
     top4000 = pd.concat([top4000, missing], ignore_index=True)
@@ -684,10 +690,10 @@ ax.scatter(author_df["followers_count"] + 1,
                         vmax=author_df["engagement_ratio"].quantile(0.95)))
 ax.set_xscale("log"); ax.set_yscale("log")
 
-# Highlight: gold outline rings for all selected users
-highlight_rows = author_df[author_df["handle"].isin(HIGHLIGHT_HANDLES)]
+# Highlight: gold outline rings for all selected users (off by default now)
+highlight_rows = author_df[author_df["handle"].isin(_HL)]
 found_handles = set(highlight_rows["handle"].values)
-missing_handles = HIGHLIGHT_HANDLES - found_handles
+missing_handles = _HL - found_handles
 if missing_handles:
     print(f"WARNING: not found in author_df_full ({len(missing_handles)}):")
     for h in sorted(missing_handles):
@@ -740,7 +746,8 @@ cb = fig.colorbar(ax.collections[0], ax=ax, label="engagement ratio (log)")
 cb.outline.set_visible(False)
 ax.set_xlabel("Follower count")
 ax.set_ylabel("Avg likes per post")
-ax.set_title(f"Top 4,000 liked accounts (+ {len(found_handles)} highlighted)", fontsize=18)
+_extra = f" (+ {len(found_handles)} highlighted)" if found_handles else ""
+ax.set_title(f"Top 4,000 liked accounts{_extra}", fontsize=18)
 ax.text(0.02, 0.98,
         '"Anyone can cook." - Ratatouille',
         transform=ax.transAxes,

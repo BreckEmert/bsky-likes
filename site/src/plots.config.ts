@@ -6,6 +6,7 @@ export type HighlightKind =
   | "svg-point"
   | "svg-line"
   | "list-row"
+  | "follows" // punch in your handle -> highlight 15 random accounts you follow
   | null;
 
 export type TabAnim =
@@ -134,12 +135,12 @@ export const PLOTS: PlotConfig[] = [
     id: "punching",
     tabLabel: "Likes vs Followers",
     title: "Top 4,000 liked accounts",
-    subtitle: null,
+    subtitle: "punch in your handle to light up 15 random accounts you follow",
     image: "/plots/punching.png",
     bounds: "/plots/punching.bounds.json",
-    searchable: true,
+    searchable: false, // uses the follows control instead of the handle search
     tabAnim: "spotlight-points",
-    highlight: "deck-scatter",
+    highlight: "follows",
     data: {
       handles: "/plots/punching.handles.bin",
       positions: "/plots/punching.positions.bin",

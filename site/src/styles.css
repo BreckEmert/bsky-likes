@@ -309,6 +309,53 @@ body {
   display: inline-block;
 }
 
+/* ---- "Highlight 15 you follow" control (punching plot) ---- */
+.followshl { width: 300px; max-width: 78vw; }
+.followshl__row { display: flex; gap: 6px; }
+.followshl__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(17, 21, 27, 0.92);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+  outline: none;
+}
+.followshl__input:focus { border-color: #ec4899; }
+.followshl__btn,
+.followshl__shuffle {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #ec4899;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.followshl__btn:disabled { opacity: 0.5; cursor: default; }
+.followshl__shuffle {
+  margin-top: 6px;
+  color: #ec4899;
+  background: rgba(236, 72, 153, 0.14);
+  border: 1px solid rgba(236, 72, 153, 0.5);
+}
+.followshl__shuffle:hover { background: rgba(236, 72, 153, 0.22); }
+.followshl__status {
+  margin-top: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(17, 21, 27, 0.92);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+  display: inline-block;
+  max-width: 100%;
+}
+
 /* ---- Leaderboards (list-row) ---- */
 .listrows {
   width: 100%;

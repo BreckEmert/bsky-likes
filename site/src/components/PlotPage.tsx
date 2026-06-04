@@ -13,9 +13,14 @@ import { useLeaderboard } from "../lib/useLeaderboard.ts";
 import { useHistograms } from "../lib/useHistograms.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { SvgPoint } from "./highlights/SvgPoint.tsx";
+import { SvgPoints, type HLPoint } from "./highlights/SvgPoints.tsx";
 import { SvgLine } from "./highlights/SvgLine.tsx";
 import { ListRows } from "./highlights/ListRows.tsx";
+import { FollowsHighlight, type FollowPicks } from "./FollowsHighlight.tsx";
 import { ProfileCard } from "./ProfileCard.tsx";
+
+const FOLLOW_PINK = "#ec4899";
+const FOLLOW_USER = "#22d3ee"; // distinct-but-friendly cyan for the searched user
 
 interface Props {
   plot: PlotConfig;
@@ -53,11 +58,35 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
     isLine ? plot.data?.histmeta : undefined
   );
 
-  useEffect(() => setNatural(null), [plot.id]);
+  // "Highlight 15 you follow" feature (punching plot). Local to this plot, not
+  // tied to the global selectedHandle.
+  const isFollows = plot.highlight === "follows";
+  const [followPicks, setFollowPicks] = useState<FollowPicks>({ user: null, picks: [] });
+
+  useEffect(() => {
+    setNatural(null);
+    setFollowPicks({ user: null, picks: [] });
+  }, [plot.id]);
 
   const imgRect = natural
     ? containRect(stageSize.width, stageSize.height, natural.w, natural.h)
     : null;
+
+  // Resolve the followed picks (pink) + the user (cyan, "hero") to plot points.
+  const followItems: HLPoint[] =
+    isFollows && points
+      ? [
+          ...followPicks.picks.map((h) => ({ h, color: FOLLOW_PINK, big: false })),
+          ...(followPicks.user
+            ? [{ h: followPicks.user, color: FOLLOW_USER, big: true }]
+            : []),
+        ]
+          .map(({ h, color, big }): HLPoint | null => {
+            const p = points.get(h);
+            return p ? { handle: h, point: p, color, big } : null;
+          })
+          .filter((x): x is HLPoint => x !== null)
+      : [];
 
   const effBounds: Bounds | null =
     bounds ?? (natural ? identityBounds(natural.w, natural.h) : null);
@@ -139,9 +168,18 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
           </div>
         )}
 
+        {/* "Highlight 15 you follow" control (punching plot). */}
+        {isFollows && (
+          <div className="plotpage__search">
+            <FollowsHighlight points={points} onPicks={setFollowPicks} />
+          </div>
+        )}
+
         {/* Profile card for the selected handle. Only on searchable plots —
-            non-selectable plots (long-tail, wakes-up) shouldn't show it. */}
+            non-selectable plots (long-tail, wakes-up) shouldn't show it. The
+            follows plot shows the entered user's card instead. */}
         {plot.searchable && <ProfileCard handle={selectedHandle} />}
+        {isFollows && followPicks.user && <ProfileCard handle={followPicks.user} />}
 
         {plot.image ? (
           <img
@@ -174,6 +212,9 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
             {/* svg-point and deck-scatter both highlight one point with the
                 same ring (both load binary point data). deck.gl hover-any-point
                 is a deferred enhancement; the search-highlight is identical. */}
+            {isFollows && (
+              <SvgPoints items={followItems} bounds={bounds} imgRect={imgRect} />
+            )}
             {(plot.highlight === "svg-point" ||
               plot.highlight === "deck-scatter") && (
               <SvgPoint
