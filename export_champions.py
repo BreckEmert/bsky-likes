@@ -25,6 +25,7 @@ import polars as pl
 from bsky_likes import config
 
 MIN_SUPPORT = 0.06        # champion must be liked by >= 6% of its community
+TOP_K = 3                 # "by community" view: top-K champions per sub (by lift)
 UPPER_FOLLOWERS = 50_000  # >= this -> upper class
 LOWER_FOLLOWERS = 2_000   # < this  -> lower class (middle is in between)
 ROOT = Path(__file__).parent
@@ -164,6 +165,38 @@ for t in topics.values():
     for c in t["champions"]:
         counts[c["class"]] += 1
 
+# --- "by community" view: the top-K champions of EACH fine-grained sub, by lift.
+#     (A pure lift threshold doesn't work -- insular subs have hundreds of high-lift
+#     niche accounts while mainstream subs top out near 2x, so a single cutoff either
+#     floods or empties. Top-K is bounded and consistent: every sub gets up to K.) ---
+topk = (
+    sa.sort("lift", descending=True).group_by("sub").head(TOP_K)
+    .join(users, left_on="post_author_did", right_on="did", how="left")
+    .join(sub_topic, on="sub", how="left")
+)
+communities: dict = {}
+for r in topk.sort("lift", descending=True).to_dicts():
+    if not r.get("handle"):
+        continue
+    sid = int(r["sub"])
+    tid = r.get("topic")
+    co = communities.setdefault(sid, {
+        "sub": sid,
+        "name": sub_name.get(sid, ""),
+        "topic": tid,
+        "color": topic_meta.get(tid, {}).get("color", [140, 140, 140]),
+        "subSize": int(r["sub_size"]),
+        "champions": [],
+    })
+    f = r.get("followers_count")
+    co["champions"].append({
+        "handle": r["handle"],
+        "supporters": int(r["supporters"]),
+        "lift": round(float(r["lift"]), 1),
+        "followers": int(f) if f else 0,
+        "class": klass(f),
+    })
+
 out = {
     "totalUsers": N,
     "classCounts": counts,
@@ -171,6 +204,7 @@ out = {
         topics.values(),
         key=lambda t: -sum(c["subSize"] for c in t["champions"]),
     ),
+    "communities": sorted(communities.values(), key=lambda c: -c["subSize"]),
 }
 SITE.mkdir(parents=True, exist_ok=True)
 (SITE / "champions.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")

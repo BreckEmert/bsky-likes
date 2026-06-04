@@ -42,11 +42,6 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
   const total = data.classCounts.upper + data.classCounts.middle + data.classCounts.lower;
   const midPct = total ? Math.round((data.classCounts.middle / total) * 100) : 0;
 
-  // every fine-grained sub-community as its own row, biggest first
-  const flat = data.topics
-    .flatMap((t) => t.champions.map((c) => ({ c, color: t.color })))
-    .sort((a, b) => b.c.subSize - a.c.subSize);
-
   return (
     <div className="champs">
       <MapTitleSwitch view={view} onSwitch={onSwitch} />
@@ -102,6 +97,8 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
         {layout === "topic"
           ? data.topics.map((t) => {
               const sum = t.champions.reduce((s, c) => s + c.subSize, 0) || 1;
+              // widest bar (biggest community) first, left-to-right
+              const cells = [...t.champions].sort((a, b) => b.subSize - a.subSize);
               return (
                 <div className="champrow" key={t.topic}>
                   <div
@@ -112,7 +109,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                     {t.name}
                   </div>
                   <div className="champrow__cells">
-                    {t.champions.map((c, i) => (
+                    {cells.map((c, i) => (
                       <button
                         // a handle can champion two sub-communities (e.g. tobyfox),
                         // so the index keeps the key unique.
@@ -132,30 +129,43 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                 </div>
               );
             })
-          : flat.map(({ c, color }, i) => (
-              <div className="champrow" key={c.handle + "-" + i}>
+          : data.communities.map((co) => (
+              <div className="champrow" key={co.sub}>
                 <div
                   className="champrow__topic champrow__topic--wide"
-                  style={{ color: `rgb(${color[0]},${color[1]},${color[2]})` }}
-                  title={c.subName}
+                  style={{ color: `rgb(${co.color[0]},${co.color[1]},${co.color[2]})` }}
+                  title={co.name}
                 >
-                  {c.subName || "Unnamed community"}
+                  <span className="champrow__name">{co.name || "Unnamed community"}</span>
+                  <span className="champrow__size">{co.subSize.toLocaleString()} users</span>
                 </div>
                 <div className="champrow__cells">
-                  <button
-                    className={"champcell champcell--row champcell--" + c.class}
-                    onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
-                    onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => onSelectHandle(c.handle)}
-                  >
-                    <span className="champcell__h">
-                      @{c.handle.replace(/\.bsky\.social$/, "")}
-                    </span>
-                    <span className="champcell__meta">
-                      {c.subSize.toLocaleString()} users
-                    </span>
-                  </button>
+                  {co.champions.map((ch, i) => {
+                    // reshape into the Champion the shared tooltip expects
+                    const c: Champion = {
+                      handle: ch.handle,
+                      subName: co.name,
+                      subSize: co.subSize,
+                      supporters: ch.supporters,
+                      lift: ch.lift,
+                      followers: ch.followers,
+                      class: ch.class,
+                    };
+                    return (
+                      <button
+                        key={ch.handle + "-" + i}
+                        className={"champcell champcell--" + ch.class}
+                        onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
+                        onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHover(null)}
+                        onClick={() => onSelectHandle(ch.handle)}
+                      >
+                        <span className="champcell__h">
+                          @{ch.handle.replace(/\.bsky\.social$/, "")}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}

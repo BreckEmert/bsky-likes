@@ -20,10 +20,28 @@ export interface ChampTopic {
   champions: Champion[];
 }
 
+// "By community" view: one fine-grained sub-community + its top-K champions (by lift).
+export interface CommunityChampion {
+  handle: string;
+  supporters: number;
+  lift: number;
+  followers: number;
+  class: ChampClass;
+}
+export interface Community {
+  sub: number;
+  name: string;
+  topic: number;
+  color: [number, number, number];
+  subSize: number;
+  champions: CommunityChampion[];
+}
+
 export interface ChampionsData {
   totalUsers: number;
   classCounts: Record<ChampClass, number>;
   topics: ChampTopic[];
+  communities: Community[];
 }
 
 /** Load champions.json (produced by export_champions.py) for the champions tab. */

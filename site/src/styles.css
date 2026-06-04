@@ -761,25 +761,22 @@ body {
   overflow: hidden;
   /* wrap to (up to) two lines instead of cutting the name off */
 }
-.champrow__topic--wide { flex-basis: 210px; } /* per-community view: the title is the star */
+/* per-community view: the title is the star -> wider, stacks name + size */
+.champrow__topic--wide {
+  flex-basis: 210px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+}
+.champrow__name { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.champrow__size { font-size: 10.5px; font-weight: 500; color: var(--muted); }
 .champrow__cells {
   flex: 1 1 auto;
   display: flex;
   gap: 3px;
   min-width: 0;
 }
-/* per-community view: one full-width cell, handle left + size right.
-   (.champcell.champcell--row out-specifies the base .champcell that follows.) */
-.champs__tree--flat .champrow { min-height: 38px; }
-.champcell.champcell--row {
-  flex: 1 1 auto;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-.champcell.champcell--row .champcell__h { color: var(--text); font-weight: 600; }
-.champcell__meta { flex: none; font-size: 11px; color: var(--muted); }
 .champcell {
   flex-grow: var(--cw, 1); /* desktop: width ∝ community size (strip treemap) */
   flex-shrink: 1;
@@ -1061,11 +1058,9 @@ body {
     font-size: 12px;
     padding: 5px 8px;
   }
-  /* per-community view fits the screen (one cell/row) -> no horizontal scroll */
-  .champs__tree--flat { overflow-x: hidden; }
-  .champs__tree--flat .champrow { width: auto; }
-  .champs__tree--flat .champrow__topic--wide { flex: 0 0 108px; }
-  .champs__tree--flat .champcell--row { flex: 1 1 auto; min-width: 0; }
+  /* per-community view: same horizontal-scroll behavior as by-topic, but the
+     sticky title column is a touch wider since the community name leads. */
+  .champs__tree--flat .champrow__topic--wide { flex: 0 0 116px; align-items: flex-start; }
 
   /* No hover on touch: keep the climb-up chevron permanently visible on plots. */
   .app--plots .mapchev { opacity: 0.5; pointer-events: auto; }
