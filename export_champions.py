@@ -119,6 +119,25 @@ for r in champ.sort("lift", descending=True).to_dicts():
         "class": cl,
     })
 
+# One account can win two sub-communities in the same topic -> merge into a
+# single cell (sum the sizes, keep the strongest lift) so it doesn't appear twice.
+for t in topics.values():
+    by_h, deduped = {}, []
+    for c in t["champions"]:
+        if c["handle"] in by_h:
+            e = by_h[c["handle"]]
+            e["subSize"] += c["subSize"]
+            e["supporters"] += c["supporters"]
+            e["lift"] = max(e["lift"], c["lift"])
+        else:
+            by_h[c["handle"]] = c
+            deduped.append(c)
+    t["champions"] = deduped
+counts = {"upper": 0, "middle": 0, "lower": 0}
+for t in topics.values():
+    for c in t["champions"]:
+        counts[c["class"]] += 1
+
 out = {
     "totalUsers": N,
     "classCounts": counts,
