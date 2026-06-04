@@ -12,7 +12,16 @@ import { MapAtmosphere } from "./MapAtmosphere.tsx";
 interface Props {
   selectedHandle: string | null;
   onSelectHandle: (h: string | null) => void;
+  // "user" = leave the camera where the user left it; "pretty" = glide to a
+  // preset framing (used while the plots are in focus). Switching back to
+  // "user" restores exactly the view they were last on.
+  framing?: "user" | "pretty";
 }
+
+// The preset "prettiest" framing shown while the plots have focus. Fractions of
+// the data bounds for the center, plus how far into the zoom range to push.
+// Guessed for now -- easy to tune.
+const PRETTY = { cx: 0.5, cy: 0.52, zoomFrac: 0.34 };
 
 interface VS {
   target: [number, number, number];
@@ -31,13 +40,15 @@ const ZOOM_SPAN = 6;      // max zoom == fit + ZOOM_SPAN (keep in sync below)
 const LOD_FULL_PCT = 63;  // zoom % at which the full point set is shown
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
+export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }: Props) {
   const data = useExploreData();
   const regions = useRegions();
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [viewState, setViewState] = useState<VS | null>(null);
   const viewStateRef = useRef<VS | null>(null); // always-latest, for fly-to
   const flyingRef = useRef(false); // true during a fly-to transition (suppress echo/clamp)
+  const savedViewRef = useRef<VS | null>(null); // the user's view, saved before a "pretty" reframe
+  const framingMounted = useRef(false); // skip the initial framing effect run
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const [colorMode, setColorMode] = useState<"continuum" | "topics">("continuum");
   const initialZoom = useRef(0);
@@ -88,6 +99,51 @@ export function ExploreMap({ selectedHandle, onSelectHandle }: Props) {
     window.setTimeout(() => (flyingRef.current = false), 900);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedHandle, data]);
+
+  // Reframe when navigating between the map and the plots. Heading to the
+  // plots: remember the user's current view, then glide to the pretty preset.
+  // Heading back: glide to exactly where they were. Reuses the fly-to machinery
+  // (flyingRef suppresses the pan-clamp / frame echo during the glide).
+  useEffect(() => {
+    if (!data || !viewState) return;
+    // Skip the first run (mount): don't reframe before the user navigates.
+    if (!framingMounted.current) {
+      framingMounted.current = true;
+      return;
+    }
+    const b = data.bounds;
+    let dest: VS;
+    if (framing === "pretty") {
+      savedViewRef.current = viewStateRef.current;
+      dest = {
+        target: [
+          b.xMin + (b.xMax - b.xMin) * PRETTY.cx,
+          b.yMin + (b.yMax - b.yMin) * PRETTY.cy,
+          0,
+        ],
+        zoom: initialZoom.current + ZOOM_SPAN * PRETTY.zoomFrac,
+      };
+    } else {
+      dest = savedViewRef.current ?? {
+        target: [(b.xMin + b.xMax) / 2, (b.yMin + b.yMax) / 2, 0],
+        zoom: initialZoom.current,
+      };
+    }
+    flyingRef.current = true;
+    setViewState({
+      ...dest,
+      transitionDuration: 850,
+      transitionInterpolator: new LinearInterpolator(["target", "zoom"]),
+      transitionEasing: (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+      onTransitionEnd: () => {
+        flyingRef.current = false;
+        setViewState(dest);
+      },
+    } as never);
+    window.setTimeout(() => (flyingRef.current = false), 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [framing]);
 
   const zoomDelta = viewState ? Math.max(0, viewState.zoom - initialZoom.current) : 0;
   const numVisible = useMemo(() => {
