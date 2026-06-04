@@ -23,6 +23,9 @@ interface Props {
 export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }: Props) {
   const data = useChampions();
   const [hover, setHover] = useState<{ c: Champion; x: number; y: number } | null>(null);
+  // "topic" = champions grouped under their broad topic (cells ∝ size);
+  // "community" = one row per fine-grained sub-community + its champion.
+  const [layout, setLayout] = useState<"topic" | "community">("topic");
 
   if (!data) {
     return (
@@ -38,6 +41,11 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
 
   const total = data.classCounts.upper + data.classCounts.middle + data.classCounts.lower;
   const midPct = total ? Math.round((data.classCounts.middle / total) * 100) : 0;
+
+  // every fine-grained sub-community as its own row, biggest first
+  const flat = data.topics
+    .flatMap((t) => t.champions.map((c) => ({ c, color: t.color })))
+    .sort((a, b) => b.c.subSize - a.c.subSize);
 
   return (
     <div className="champs">
@@ -59,6 +67,26 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
             {midPct}% of tribes are owned by an account that isn’t famous (under
             50k followers).
           </div>
+          <div className="champs__toggle" role="tablist" aria-label="Champions layout">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={layout === "topic"}
+              className={"champs__toggle-b" + (layout === "topic" ? " is-on" : "")}
+              onClick={() => setLayout("topic")}
+            >
+              By topic
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={layout === "community"}
+              className={"champs__toggle-b" + (layout === "community" ? " is-on" : "")}
+              onClick={() => setLayout("community")}
+            >
+              By community
+            </button>
+          </div>
         </div>
         <ul className="champs__legend">
           {(["upper", "middle", "lower"] as ChampClass[]).map((k) => (
@@ -70,39 +98,67 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
         </ul>
       </div>
 
-      <div className="champs__tree">
-        {data.topics.map((t) => {
-          const sum = t.champions.reduce((s, c) => s + c.subSize, 0) || 1;
-          return (
-            <div className="champrow" key={t.topic}>
-              <div
-                className="champrow__topic"
-                style={{ color: `rgb(${t.color[0]},${t.color[1]},${t.color[2]})` }}
-                title={t.name}
-              >
-                {t.name}
-              </div>
-              <div className="champrow__cells">
-                {t.champions.map((c, i) => (
+      <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
+        {layout === "topic"
+          ? data.topics.map((t) => {
+              const sum = t.champions.reduce((s, c) => s + c.subSize, 0) || 1;
+              return (
+                <div className="champrow" key={t.topic}>
+                  <div
+                    className="champrow__topic"
+                    style={{ color: `rgb(${t.color[0]},${t.color[1]},${t.color[2]})` }}
+                    title={t.name}
+                  >
+                    {t.name}
+                  </div>
+                  <div className="champrow__cells">
+                    {t.champions.map((c, i) => (
+                      <button
+                        // a handle can champion two sub-communities (e.g. tobyfox),
+                        // so the index keeps the key unique.
+                        key={c.handle + "-" + i}
+                        className={"champcell champcell--" + c.class}
+                        style={{ ["--cw" as string]: String(c.subSize / sum) }}
+                        onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
+                        onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHover(null)}
+                        onClick={() => onSelectHandle(c.handle)}
+                      >
+                        {c.subName && <span className="champcell__sub">{c.subName}</span>}
+                        <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          : flat.map(({ c, color }, i) => (
+              <div className="champrow" key={c.handle + "-" + i}>
+                <div
+                  className="champrow__topic champrow__topic--wide"
+                  style={{ color: `rgb(${color[0]},${color[1]},${color[2]})` }}
+                  title={c.subName}
+                >
+                  {c.subName || "Unnamed community"}
+                </div>
+                <div className="champrow__cells">
                   <button
-                    // a handle can champion two sub-communities (e.g. tobyfox),
-                    // so the index keeps the key unique.
-                    key={c.handle + "-" + i}
-                    className={"champcell champcell--" + c.class}
-                    style={{ ["--cw" as string]: String(c.subSize / sum) }}
+                    className={"champcell champcell--row champcell--" + c.class}
                     onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                     onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setHover(null)}
                     onClick={() => onSelectHandle(c.handle)}
                   >
-                    {c.subName && <span className="champcell__sub">{c.subName}</span>}
-                    <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
+                    <span className="champcell__h">
+                      @{c.handle.replace(/\.bsky\.social$/, "")}
+                    </span>
+                    <span className="champcell__meta">
+                      {c.subSize.toLocaleString()} users
+                    </span>
                   </button>
-                ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            ))}
       </div>
 
       {hover && (
