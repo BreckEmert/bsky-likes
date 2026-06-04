@@ -26,8 +26,9 @@ export default function App() {
   // awkward ~halfway scroll.
   const [nearSeam, setNearSeam] = useState(false);
   const [seamZone, setSeamZone] = useState<"map" | "plots" | "mid">("map");
-  const showDown = nearSeam && seamZone !== "plots"; // map or mid -> offer "down"
-  const showUp = nearSeam && seamZone !== "map"; //     plots or mid -> offer "up"
+  // Only the UP chevron remains (plots -> back to the map). Going DOWN to the
+  // plots happens by clicking a plot tab tile.
+  const showUp = nearSeam && seamZone !== "map";
 
   const active = PLOTS.find((p) => p.id === activeId) ?? PLOTS[0];
 
@@ -62,13 +63,7 @@ export default function App() {
           selectedHandle={selectedHandle}
           onSelectHandle={setSelectedHandle}
         />
-        {/* Full-width hover band along the map's bottom edge. */}
-        <div
-          className="seamzone seamzone--down"
-          onMouseEnter={() => setNearSeam(true)}
-          onMouseLeave={() => setNearSeam(false)}
-        />
-        {/* UP chevron lives here (map bottom); shown when going up. */}
+        {/* UP chevron lives here (map bottom); shown when viewing the plots. */}
         <button
           className={"seamchev seamchev--up" + (showUp ? " is-on" : "")}
           aria-label="back up to the map"
@@ -82,22 +77,13 @@ export default function App() {
 
       {/* Below: the premade plots, with a label on the left. */}
       <section className="plots" ref={plotsRef}>
-        {/* Full-width hover band along the plots' top edge. */}
+        {/* Full-width hover band along the plots' top edge -> reveals the UP
+            chevron (which lives at the map's bottom). */}
         <div
           className="seamzone seamzone--up"
           onMouseEnter={() => setNearSeam(true)}
           onMouseLeave={() => setNearSeam(false)}
         />
-        {/* DOWN chevron lives here (plots top); shown when going down. */}
-        <button
-          className={"seamchev seamchev--down" + (showDown ? " is-on" : "")}
-          aria-label="down to the premade plots"
-          onMouseEnter={() => setNearSeam(true)}
-          onMouseLeave={() => setNearSeam(false)}
-          onClick={() => scrollTo(plotsRef)}
-        >
-          <ChevronStack />
-        </button>
         <div className="plots__label">
           Explore some
           <br />
