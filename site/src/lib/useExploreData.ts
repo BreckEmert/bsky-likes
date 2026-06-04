@@ -34,6 +34,7 @@ const REMOVE_CLUSTERS = [
   "pompelo.bsky.social",
   "orifolger.bsky.social",
   "sykkelpippi.bsky.social",
+  "doomlobbyn.se",
 ];
 const REMOVE_INDIVIDUALS = ["vdorr.bsky.social", "adraj.bsky.social"];
 const REMOVE_RADIUS_FRAC = 0.035; // of x-span; these islands are isolated

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { OrthographicView, LinearInterpolator } from "@deck.gl/core";
 import { ScatterplotLayer, BitmapLayer, TextLayer } from "@deck.gl/layers";
@@ -50,26 +50,39 @@ const LOD_BASE = 20000;   // overview ~= one point per occupied cell (even)
 const ZOOM_SPAN = 6;      // max zoom == fit + ZOOM_SPAN (keep in sync below)
 const LOD_FULL_PCT = 63;  // zoom % at which the full point set is shown
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-// Greedy label declutter in WORLD space: place biggest-first, drop any whose box
-// overlaps an already-placed one. Recomputed per zoom (scale = px/world unit),
-// so more labels reappear as you zoom in. Pan-independent (world coords).
-function declutterLabels(labels: Region[], sizeBase: number, zoom: number): Region[] {
-  const scale = Math.pow(2, zoom); // pixels per world unit (OrthographicView)
-  const sorted = [...labels].sort((a, b) => b.size - a.size); // priority: bigger first
-  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
-  const kept: Region[] = [];
-  const PAD = 6; // px breathing room between labels
-  for (const r of sorted) {
+// MONOTONIC label LOD: precompute, per label, the zoom at which it first stops
+// overlapping every HIGHER-priority (bigger) label. Then at runtime show labels
+// whose reveal-zoom <= current zoom. Zooming in only ever ADDS labels (never
+// removes), so there's no flip-flop -- unlike a per-frame greedy declutter,
+// which "frees" a small label whenever a bigger one happens to get dropped.
+function labelReveals(labels: Region[], sizeBase: number): Map<Region, number> {
+  const PAD = 6; // px breathing room
+  const halfW = (r: Region) => {
     const fs = clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12);
-    const halfW = (r.name.length * fs * 0.52 + PAD) / 2 / scale;
-    const halfH = (fs + PAD) / 2 / scale;
-    const b = { x0: r.x - halfW, x1: r.x + halfW, y0: r.y - halfH, y1: r.y + halfH };
-    if (!placed.some((p) => b.x0 < p.x1 && b.x1 > p.x0 && b.y0 < p.y1 && b.y1 > p.y0)) {
-      placed.push(b);
-      kept.push(r);
+    return (r.name.length * fs * 0.52 + PAD) / 2; // pixels
+  };
+  const halfH = (r: Region) => {
+    const fs = clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12);
+    return (fs + PAD) / 2; // pixels
+  };
+  const sorted = [...labels].sort((a, b) => b.size - a.size); // priority: bigger first
+  const reveal = new Map<Region, number>();
+  for (let i = 0; i < sorted.length; i++) {
+    const L = sorted[i];
+    let rz = -Infinity; // the biggest label always shows
+    for (let j = 0; j < i; j++) {
+      const H = sorted[j];
+      const dx = Math.abs(L.x - H.x);
+      const dy = Math.abs(L.y - H.y);
+      // boxes overlap in x while zoom < log2((wL+wH)/dx); they separate (in 2D)
+      // as soon as EITHER axis separates -> sep zoom = min(zx, zy).
+      const zx = dx > 0 ? Math.log2((halfW(L) + halfW(H)) / dx) : Infinity;
+      const zy = dy > 0 ? Math.log2((halfH(L) + halfH(H)) / dy) : Infinity;
+      rz = Math.max(rz, Math.min(zx, zy));
     }
+    reveal.set(L, rz);
   }
-  return kept;
+  return reveal;
 }
 
 // Hand-placed annotations for the empty "voids" in the like-space -- faint gray
@@ -83,6 +96,14 @@ const VOID_LABELS: { name: string; x: number; y: number }[] = [
 export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }: Props) {
   const data = useExploreData();
   const regions = useRegions();
+  // Reveal-zoom per label, computed once per tier (stable across pan/zoom).
+  const reveals = useMemo(
+    () => ({
+      1: labelReveals(regions.filter((r) => (r.tier ?? 1) === 1), 13),
+      2: labelReveals(regions.filter((r) => (r.tier ?? 1) === 2), 11),
+    }),
+    [regions]
+  );
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [viewState, setViewState] = useState<VS | null>(null);
   const viewStateRef = useRef<VS | null>(null); // always-latest, for fly-to
@@ -152,7 +173,10 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
   // plots: remember the user's current view, then glide to the pretty preset.
   // Heading back: glide to exactly where they were. Reuses the fly-to machinery
   // (flyingRef suppresses the pan-clamp / frame echo during the glide).
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so the camera glide is kicked off in the
+  // SAME frame the section starts sliding -> they animate together, not the map
+  // lagging until the slide is nearly done.
+  useLayoutEffect(() => {
     if (!data || !viewState) return;
     // Skip the first run (mount): don't reframe before the user navigates.
     if (!framingMounted.current) {
@@ -333,10 +357,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     // Region labels in two zoom-gated tiers (broad overview -> finer at ~37%).
     const labelTier = (tier: number, opacity: number, sizeBase: number) => {
       if (!regions.length || opacity <= 0 || !viewState) return;
-      const rs = declutterLabels(
-        regions.filter((r) => (r.tier ?? 1) === tier),
-        sizeBase,
-        viewState.zoom
+      const rz = reveals[tier as 1 | 2];
+      const rs = regions.filter(
+        (r) => (r.tier ?? 1) === tier && (rz.get(r) ?? -Infinity) <= viewState.zoom
       );
       if (!rs.length) return;
       out.push(
@@ -392,7 +415,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, tier1Opacity, tier2Opacity, colorMode, glowSpread]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread]);
 
   return (
     <div className="exploremap" ref={ref}>
