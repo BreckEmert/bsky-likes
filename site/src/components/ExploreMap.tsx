@@ -264,10 +264,6 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     0,
     1
   );
-  // Overview-only title: makes it unmistakable that the map is people clustered
-  // by who they LIKE. Full at the fit, faded out by ~12% zoom (once region
-  // labels take over).
-  const titleOpacity = clamp((12 - zoomPct) / 12, 0, 1);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -475,10 +471,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       )}
       {!data && <div className="exploremap__status">loading map…</div>}
 
-      {/* Overview title / view switcher -- fades out as you zoom past the fit. */}
-      {data && titleOpacity > 0.01 && (
-        <MapTitleSwitch view={mapView} onSwitch={onSwitchView} opacity={titleOpacity} />
-      )}
+      {/* Title / view switcher -- always visible so you can switch any time. */}
+      {data && <MapTitleSwitch view={mapView} onSwitch={onSwitchView} />}
 
       <div className="exploremap__search">
         <SearchBox

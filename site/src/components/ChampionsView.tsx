@@ -44,9 +44,21 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
       <MapTitleSwitch view={view} onSwitch={onSwitch} />
 
       <div className="champs__head">
-        <div className="champs__stat">
-          <b>Middle-class workhorses</b> — {midPct}% of tribes are owned by an
-          account that isn’t famous (under 50k followers).
+        <div className="champs__intro">
+          <div className="champs__title">
+            Each community’s champion — the account it loves far more than the
+            rest of Bluesky does.
+          </div>
+          <div className="champs__tech">
+            Found by <em>lift</em>: a community’s like-rate for an account ÷ the
+            whole site’s, so its true favorites outrank the megastars everyone
+            likes. Sorted into classes by follower count.
+          </div>
+          <div className="champs__stat">
+            <span className="champs__midchip">Middle-class workhorses</span> —{" "}
+            {midPct}% of tribes are owned by an account that isn’t famous (under
+            50k followers).
+          </div>
         </div>
         <ul className="champs__legend">
           {(["upper", "middle", "lower"] as ChampClass[]).map((k) => (
