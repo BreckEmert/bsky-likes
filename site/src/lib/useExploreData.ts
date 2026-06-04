@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { asset } from "./asset.ts";
+import { expandHandle } from "./binary.ts";
 
 export interface TopicLegend {
   id: number;
@@ -116,7 +117,7 @@ function parseHandles(buf: ArrayBuffer): string[] {
   const dec = new TextDecoder();
   const out = new Array<string>(count);
   for (let i = 0; i < count; i++)
-    out[i] = dec.decode(u8.subarray(start + offsets[i], start + offsets[i + 1]));
+    out[i] = expandHandle(dec.decode(u8.subarray(start + offsets[i], start + offsets[i + 1])));
   return out;
 }
 
@@ -127,6 +128,9 @@ export function useExploreData(): ExploreData | null {
     let cancelled = false;
     const opt = (url: string, kind: "buf" | "json") =>
       fetch(asset(url)).then((r) => (r.ok ? (kind === "buf" ? r.arrayBuffer() : r.json()) : null)).catch(() => null);
+    // handles.bin is ~40% smaller now (".bsky.social" suffix stripped), so the
+    // map's first load is already much lighter -- one fetch keeps deck's canvas
+    // sizing happy (the deferred two-stage load raced the element measurement).
     Promise.all([
       fetch(asset("/explore/points.bin")).then((r) => r.arrayBuffer()),
       fetch(asset("/explore/colors.bin")).then((r) => r.arrayBuffer()),
@@ -137,7 +141,7 @@ export function useExploreData(): ExploreData | null {
     ])
       .then(([pb, cb, hb, meta, ctb, legend]) => {
         if (cancelled) return;
-        const filtered = applyRemovals(
+        const f = applyRemovals(
           {
             points: new Float32Array(pb),
             colors: new Uint8Array(cb),
@@ -146,17 +150,16 @@ export function useExploreData(): ExploreData | null {
           },
           meta.bounds
         );
-        const { points, colors, colorsTopic, handles } = filtered;
         const index = new Map<string, number>();
-        for (let i = 0; i < handles.length; i++) index.set(handles[i], i);
+        for (let i = 0; i < f.handles.length; i++) index.set(f.handles[i], i);
         setData({
-          points,
-          colors,
-          colorsTopic,
+          points: f.points,
+          colors: f.colors,
+          colorsTopic: f.colorsTopic,
           legend: (legend as TopicLegend[] | null) ?? null,
-          handles,
+          handles: f.handles,
           index,
-          n: handles.length,
+          n: f.handles.length,
           bounds: meta.bounds,
         });
       })

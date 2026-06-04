@@ -73,9 +73,11 @@ function declutterLabels(labels: Region[], sizeBase: number, zoom: number): Regi
 }
 
 // Hand-placed annotations for the empty "voids" in the like-space -- faint gray
-// italic, overview only. (data coords, tune by eye)
+// italic, overview only. (data coords, tune by eye). The handles here are casual
+// number-suffixed accounts with diffuse, mainstream likes -- no niche, hence the
+// gap between the strong clusters.
 const VOID_LABELS: { name: string; x: number; y: number }[] = [
-  { name: "The Liminal Void", x: 1.4, y: 4.62 },
+  { name: "The Normie Void", x: 1.4, y: 4.62 },
 ];
 
 export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }: Props) {
@@ -87,7 +89,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
   const flyingRef = useRef(false); // true during a fly-to transition (suppress echo/clamp)
   const savedViewRef = useRef<VS | null>(null); // the user's view, saved before a "pretty" reframe
   const framingMounted = useRef(false); // skip the initial framing effect run
-  const prevSelectedRef = useRef<string | null>(null); // last selected handle (none->user detection)
+  const fromDotRef = useRef(false); // true when the selection came from clicking a map dot
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const [colorMode, setColorMode] = useState<"continuum" | "topics">("topics");
   const initialZoom = useRef(0);
@@ -107,27 +109,24 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     setViewState(init);
   }, [data, size, viewState]);
 
-  // Fly to the selected handle's point (from search or another tab's selection).
+  // Center the selected handle. NEVER changes zoom (the user pans/zooms freely),
+  // and clicking a dot on the map doesn't move at all -- it's already visible.
+  // Only a SEARCH selection pans to bring the result on screen.
   useEffect(() => {
     if (!data || !viewState) return;
     const sel = selectedHandle?.toLowerCase();
-    const hadUser = prevSelectedRef.current != null;
-    prevSelectedRef.current = selectedHandle;
     if (!sel || !data.index.has(sel)) return;
+    if (fromDotRef.current) {
+      fromDotRef.current = false; // clicked a visible dot -> just highlight it
+      return;
+    }
     const i = data.index.get(sel)!;
     const px = data.points[2 * i];
     const py = data.points[2 * i + 1];
-    const liveZoom = viewStateRef.current?.zoom ?? viewState.zoom;
-    // Snap to 46% only when a search first appears (none -> user). When hopping
-    // between already-searched users, keep their current zoom -- minimal
-    // disruption to wherever they were looking.
-    const zoom = hadUser ? liveZoom : initialZoom.current + ZOOM_SPAN * 0.46;
-    // The view to restore when climbing back to the map = the user centered,
-    // with NO slice offset (the map fills the screen there). Updating this is
-    // what makes the chevron return to the searched user, not the stale view.
+    const zoom = viewStateRef.current?.zoom ?? viewState.zoom; // keep current zoom
     savedViewRef.current = { target: [px, py, 0], zoom };
-    // Fly there now. While the plots are focused, only a slice of the map shows
-    // at the top, so bias y by the slice shift to land the user inside it.
+    // While the plots are focused, only a slice of the map shows at the top, so
+    // bias y by the slice shift to land the user inside it.
     const shift = framing === "pretty" ? sliceOffsetWorld(zoom) : 0;
     const dest: VS = { target: [px, py + shift, 0], zoom };
     flyingRef.current = true;
@@ -376,7 +375,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
           data: VOID_LABELS,
           getPosition: (d: { x: number; y: number }) => [d.x, d.y],
           getText: (d: { name: string }) => d.name,
-          getSize: 15,
+          getSize: 22, // same as the region labels; only gray + opacity set it apart
           sizeUnits: "pixels",
           getColor: [150, 161, 173, 178], // gray, ~70% alpha
           fontFamily: '"DejaVu Sans", system-ui, sans-serif',
@@ -430,12 +429,15 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
           }) as never}
           layers={layers as never}
           onHover={(info: { index: number; x: number; y: number }) => {
-            if (data && info.index >= 0)
-              setHover({ handle: data.handles[info.index], x: info.x, y: info.y });
+            const h = data && info.index >= 0 ? data.handles[info.index] : null;
+            if (h) setHover({ handle: h, x: info.x, y: info.y });
             else setHover(null);
           }}
           onClick={(info: { index: number }) => {
-            if (data && info.index >= 0) onSelectHandle(data.handles[info.index]);
+            if (data && info.index >= 0 && data.handles[info.index]) {
+              fromDotRef.current = true; // don't fly the camera for a dot click
+              onSelectHandle(data.handles[info.index]);
+            }
           }}
         />
       )}

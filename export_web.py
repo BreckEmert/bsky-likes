@@ -97,8 +97,14 @@ def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200):
 # BINARY / JSON LOOKUP WRITERS  (Theo-format binaries)
 # ===========================================================================
 def write_handles_bin(handles, path):
-    """uint32 count, (count+1) uint32 offsets, then concatenated UTF-8 bytes."""
-    enc = [h.encode("utf-8") for h in handles]
+    """uint32 count, (count+1) uint32 offsets, then concatenated UTF-8 bytes.
+
+    The very common ".bsky.social" suffix is replaced with a 1-byte sentinel
+    (0x01) to shrink the files ~40%; the client (src/lib/binary.ts expandHandle)
+    restores it on decode."""
+    def strip(h):
+        return (h[:-12] + "\x01") if h.endswith(".bsky.social") else h
+    enc = [strip(h).encode("utf-8") for h in handles]
     n = len(enc)
     offsets = [0]
     for b in enc:

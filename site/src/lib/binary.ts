@@ -6,6 +6,15 @@
 // One format for every searchable point plot (typical-popularity, like-repost,
 // activity, punching) — no giant JSON to parse on the client.
 
+// The exported handle bytes replace the (very common) ".bsky.social" suffix
+// with this 1-byte sentinel to shrink the files ~40%; we restore it on decode.
+export const HANDLE_SENTINEL = String.fromCharCode(1); // U+0001 (the stripped ".bsky.social")
+export function expandHandle(s: string): string {
+  return s.indexOf(HANDLE_SENTINEL) === -1
+    ? s
+    : s.replace(HANDLE_SENTINEL, ".bsky.social");
+}
+
 export interface PointData {
   handles: string[];                 // lowercased, index i <-> positions[2i]
   positions: Float32Array;           // [x0,y0,x1,y1,...] in data units
@@ -22,7 +31,9 @@ function parseHandles(buf: ArrayBuffer): string[] {
   const dec = new TextDecoder();
   const handles = new Array<string>(count);
   for (let i = 0; i < count; i++) {
-    handles[i] = dec.decode(u8.subarray(bytesStart + offsets[i], bytesStart + offsets[i + 1]));
+    handles[i] = expandHandle(
+      dec.decode(u8.subarray(bytesStart + offsets[i], bytesStart + offsets[i + 1]))
+    );
   }
   return handles;
 }
