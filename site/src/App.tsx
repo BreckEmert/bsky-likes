@@ -3,6 +3,8 @@ import { PLOTS } from "./plots.config.ts";
 import { TabBar } from "./components/TabBar.tsx";
 import { PlotPage } from "./components/PlotPage.tsx";
 import { ExploreMap } from "./components/ExploreMap.tsx";
+import { ChampionsView } from "./components/ChampionsView.tsx";
+import type { MapView } from "./components/MapTitleSwitch.tsx";
 
 // A wide stack of layered chevrons pointing UP -- the single affordance to
 // climb back from the plots to the map. White hairlines, no fill/box.
@@ -26,6 +28,8 @@ export default function App() {
   // only thing that animates is the deck camera (it reframes so the visible map
   // slice keeps your view instead of showing random bottom dots).
   const [view, setView] = useState<"map" | "plots">("map");
+  // Which map view: the like-cluster field, or the champions tree.
+  const [mapView, setMapView] = useState<MapView>("likes");
 
   // Slide the stack via the Web Animations API. A CSS transition on .stage gets
   // starved (frozen) because the constantly-repainting WebGL map inside it keeps
@@ -55,13 +59,24 @@ export default function App() {
   return (
     <div className={"app app--" + view}>
       <div className="stage" ref={stageRef}>
-        {/* Top: the explorable t-SNE field of users. */}
+        {/* Top: the explorable t-SNE field of users, OR the champions tree. */}
         <section className="explore">
-          <ExploreMap
-            selectedHandle={selectedHandle}
-            onSelectHandle={setSelectedHandle}
-            framing={view === "plots" ? "pretty" : "user"}
-          />
+          {mapView === "likes" ? (
+            <ExploreMap
+              selectedHandle={selectedHandle}
+              onSelectHandle={setSelectedHandle}
+              framing={view === "plots" ? "pretty" : "user"}
+              mapView={mapView}
+              onSwitchView={setMapView}
+            />
+          ) : (
+            <ChampionsView
+              view={mapView}
+              onSwitch={setMapView}
+              selectedHandle={selectedHandle}
+              onSelectHandle={setSelectedHandle}
+            />
+          )}
           {/* The one chevron: centered in the map's bottom slice. Inert while
               the map is focused; when the plots are focused that slice sits at
               the top of the screen and hovering it reveals the climb-up arrow. */}

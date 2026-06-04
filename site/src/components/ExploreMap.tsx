@@ -8,6 +8,7 @@ import { useElementSize } from "../lib/useElementSize.ts";
 import { SearchBox } from "./SearchBox.tsx";
 import { ProfileCard } from "./ProfileCard.tsx";
 import { MapAtmosphere } from "./MapAtmosphere.tsx";
+import { MapTitleSwitch, type MapView } from "./MapTitleSwitch.tsx";
 import { asset } from "../lib/asset.ts";
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
   // preset framing (used while the plots are in focus). Switching back to
   // "user" restores exactly the view they were last on.
   framing?: "user" | "pretty";
+  mapView: MapView;
+  onSwitchView: (v: MapView) => void;
 }
 
 // When the plots take focus, only the bottom slice of the map stays on screen.
@@ -93,7 +96,7 @@ const VOID_LABELS: { name: string; x: number; y: number }[] = [
   { name: "The Normie Void", x: 1.4, y: 4.62 },
 ];
 
-export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }: Props) {
+export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", mapView, onSwitchView }: Props) {
   const data = useExploreData();
   const regions = useRegions();
   // Reveal-zoom per label, computed once per tier (stable across pan/zoom).
@@ -472,16 +475,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
       )}
       {!data && <div className="exploremap__status">loading map…</div>}
 
-      {/* Overview title -- fades out as you zoom past the fit. */}
+      {/* Overview title / view switcher -- fades out as you zoom past the fit. */}
       {data && titleOpacity > 0.01 && (
-        <div
-          className="exploremap__title"
-          style={{ opacity: titleOpacity }}
-          aria-hidden="true"
-        >
-          <span className="exploremap__title-main">Bluesky Users</span>
-          <span className="exploremap__title-sub">clustered by who they like</span>
-        </div>
+        <MapTitleSwitch view={mapView} onSwitch={onSwitchView} opacity={titleOpacity} />
       )}
 
       <div className="exploremap__search">
