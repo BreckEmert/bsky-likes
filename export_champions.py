@@ -177,6 +177,10 @@ topk = (
     # community always backfills to K real champions instead of silently showing fewer
     .filter(pl.col("handle").is_not_null())
     .join(sub_topic, on="sub", how="left")
+    # Rank by LIFT (distinctiveness), NOT raw popularity: penetration alone just
+    # surfaces globally-famous accounts (lift ~1x) that every community likes, not
+    # each community's true favorites. The frontend sizes the bars by lift too, so
+    # the (otherwise counter-intuitive) ranking is visible and monotonic.
     .sort("lift", descending=True)  # sort LAST so group_by().head() takes top-K by lift
     .group_by("sub").head(TOP_K)
 )

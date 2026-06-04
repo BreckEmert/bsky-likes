@@ -93,6 +93,19 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
         </ul>
       </div>
 
+      <div className="champs__caption">
+        {layout === "topic" ? (
+          <>Each row is a topic; each bar is the champion of one sub-community, widest = biggest community.</>
+        ) : (
+          <>
+            Bar width = <b>lift</b>: how much more this community likes them than the
+            rest of Bluesky. Ranked by that, not raw popularity — so a distinctive
+            niche favorite (liked by 10% here, but barely elsewhere) outranks a star
+            liked by 19% who’s popular everywhere.
+          </>
+        )}
+      </div>
+
       <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
         {layout === "topic"
           ? data.topics.map((t) => {
@@ -129,7 +142,10 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                 </div>
               );
             })
-          : data.communities.map((co) => (
+          : data.communities.map((co) => {
+              // bar width ∝ lift, so the (lift-based) ranking is visible & monotonic
+              const liftSum = co.champions.reduce((s, ch) => s + ch.lift, 0) || 1;
+              return (
               <div className="champrow" key={co.sub}>
                 <div
                   className="champrow__topic champrow__topic--wide"
@@ -155,6 +171,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                       <button
                         key={ch.handle + "-" + i}
                         className={"champcell champcell--" + ch.class}
+                        style={{ ["--cw" as string]: String(ch.lift / liftSum) }}
                         onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                         onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                         onMouseLeave={() => setHover(null)}
@@ -168,7 +185,8 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
       </div>
 
       {hover && (
@@ -190,13 +208,12 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
             // per-champion metrics that actually differ within a community:
             // how many of its members like them, lift, and their fame
             <div className="champs__tip-r">
-              liked by{" "}
-              <b>
-                {Math.round((hover.c.supporters / hover.c.subSize) * 100)}%
-              </b>{" "}
-              of the community ({hover.c.supporters.toLocaleString()} of{" "}
-              {hover.c.subSize.toLocaleString()}) · <b>{hover.c.lift}×</b> vs the
-              site average · <b>{hover.c.followers.toLocaleString()}</b> followers
+              liked <b>{hover.c.lift}×</b> more than the rest of Bluesky (that’s the
+              ranking) · liked by{" "}
+              <b>{Math.round((hover.c.supporters / hover.c.subSize) * 100)}%</b> of
+              the community ({hover.c.supporters.toLocaleString()} of{" "}
+              {hover.c.subSize.toLocaleString()}) ·{" "}
+              <b>{hover.c.followers.toLocaleString()}</b> followers
             </div>
           ) : (
             <div className="champs__tip-r">
