@@ -6,11 +6,12 @@
   --muted: #9aa4b1;
   --accent: #1d9bf0;
   --tabbar-h: 88px;
-  /* Bounded two-section layout. Each section is (100vh - peek), so the other
-     section's edge (map bottom / plots tab bar) always peeks on screen. */
-  --map-peek: 15vh;                       /* always-visible slice of the off half */
-  --section-h: 85vh;                      /* = 100vh - map-peek */
-  --slide-y: 70vh;                        /* = section-h - map-peek (focus shift) */
+  /* Bounded two-section layout. The locked/peeking slice is exactly the tab bar
+     (dark grey + plot titles, down to the line below them) -- nothing more. The
+     map's bottom slice peeks at the same height. */
+  --map-peek: var(--tabbar-h);            /* always-visible slice of the off half */
+  --section-h: calc(100vh - var(--tabbar-h));     /* focused half fills the rest */
+  --slide-y: calc(100vh - 2 * var(--tabbar-h));   /* focus shift = section-h - peek */
 }
 
 * { box-sizing: border-box; }
@@ -64,8 +65,9 @@ body {
   bottom: 0;
   height: var(--map-peek);
   display: flex;
-  align-items: center;
+  align-items: flex-end;            /* sit low in the slice -- closer to center */
   justify-content: center;
+  padding-bottom: 12px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -77,8 +79,8 @@ body {
 .app--plots .mapchev { pointer-events: auto; }
 .app--plots .mapchev:hover { opacity: 0.65; }
 .mapchev__svg {
-  width: min(520px, 56vw);
-  height: 60%;
+  width: min(360px, 40vw);          /* narrower -> reads closer to the middle */
+  height: 20px;                     /* short box -> the lines sit tight together */
   display: block;
 }
 .mapchev__svg polyline {

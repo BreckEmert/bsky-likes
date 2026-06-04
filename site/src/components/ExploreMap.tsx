@@ -52,6 +52,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
   const flyingRef = useRef(false); // true during a fly-to transition (suppress echo/clamp)
   const savedViewRef = useRef<VS | null>(null); // the user's view, saved before a "pretty" reframe
   const framingMounted = useRef(false); // skip the initial framing effect run
+  const prevSelectedRef = useRef<string | null>(null); // last selected handle (none->user detection)
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const [colorMode, setColorMode] = useState<"continuum" | "topics">("continuum");
   const initialZoom = useRef(0);
@@ -75,15 +76,28 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
   useEffect(() => {
     if (!data || !viewState) return;
     const sel = selectedHandle?.toLowerCase();
+    const hadUser = prevSelectedRef.current != null;
+    prevSelectedRef.current = selectedHandle;
     if (!sel || !data.index.has(sel)) return;
     const i = data.index.get(sel)!;
+    const px = data.points[2 * i];
+    const py = data.points[2 * i + 1];
     const liveZoom = viewStateRef.current?.zoom ?? viewState.zoom;
-    const dest: VS = {
-      target: [data.points[2 * i], data.points[2 * i + 1], 0],
-      // Gentle: only zoom IN to ~60% if we're more zoomed out than that; if the
-      // user is already zoomed in, just pan (keep their zoom). No slam-to-max.
-      zoom: Math.max(liveZoom, initialZoom.current + ZOOM_SPAN * 0.6),
-    };
+    // Snap to 46% only when a search first appears (none -> user). When hopping
+    // between already-searched users, keep their current zoom -- minimal
+    // disruption to wherever they were looking.
+    const zoom = hadUser ? liveZoom : initialZoom.current + ZOOM_SPAN * 0.46;
+    // The view to restore when climbing back to the map = the user centered,
+    // with NO slice offset (the map fills the screen there). Updating this is
+    // what makes the chevron return to the searched user, not the stale view.
+    savedViewRef.current = { target: [px, py, 0], zoom };
+    // Fly there now. While the plots are focused, only a slice of the map shows
+    // at the top, so bias y by the slice shift to land the user inside it.
+    const shift =
+      framing === "pretty"
+        ? (SLICE_SHIFT_VH * (window.innerHeight / 100)) / Math.pow(2, zoom)
+        : 0;
+    const dest: VS = { target: [px, py + shift, 0], zoom };
     flyingRef.current = true;
     setViewState({
       ...dest,
@@ -171,6 +185,17 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
   const TIER_SWAP_PCT = 36;
   const tier1Opacity = zoomPct < TIER_SWAP_PCT ? 1 : 0;
   const tier2Opacity = zoomPct >= TIER_SWAP_PCT ? 1 : 0;
+  // Glow edge: the single faint disc has a hard circular boundary that reads
+  // crisp when zoomed in but harsh on the overview. Feather it as you zoom out
+  // by stacking wider, fainter concentric haloes. 0 (clean line) at >=63% zoom,
+  // ramping to full feather by ~18%.
+  const GLOW_CLEAN_PCT = 63;
+  const GLOW_SOFT_PCT = 18;
+  const glowSpread = clamp(
+    (GLOW_CLEAN_PCT - zoomPct) / (GLOW_CLEAN_PCT - GLOW_SOFT_PCT),
+    0,
+    1
+  );
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -188,22 +213,36 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
       }),
       // Soft glow: large, faint dots under the crisp points. Overlap in dense
       // clusters accumulates -> the cluster shapes softly bloom (structure-led).
-      new ScatterplotLayer({
-        id: "glow",
-        data: {
-          length: numVisible,
-          attributes: {
-            getPosition: { value: data.points, size: 2 },
-            getFillColor: { value: activeColors, size: 3 },
-          },
-        },
-        getRadius: clamp(pointRadius * 3.5, 2.2, 16),
-        radiusUnits: "pixels",
-        radiusMinPixels: 2.2,
-        opacity: 0.06,
-        pickable: false,
-        updateTriggers: { getRadius: [pointRadius], getFillColor: [colorMode] },
-      }),
+      // The base disc is the crisp boundary; extra wider/fainter haloes feather
+      // it as you zoom out (glowSpread), softening the hard edge on the overview.
+      ...[
+        { id: "glow-h2", rMul: 1 + 1.6 * glowSpread, op: 0.028 * glowSpread },
+        { id: "glow-h1", rMul: 1 + 0.7 * glowSpread, op: 0.05 * glowSpread },
+        { id: "glow", rMul: 1, op: 0.06 },
+      ]
+        .filter((g) => g.op > 0)
+        .map(
+          (g) =>
+            new ScatterplotLayer({
+              id: g.id,
+              data: {
+                length: numVisible,
+                attributes: {
+                  getPosition: { value: data.points, size: 2 },
+                  getFillColor: { value: activeColors, size: 3 },
+                },
+              },
+              getRadius: clamp(pointRadius * 3.5, 2.2, 16) * g.rMul,
+              radiusUnits: "pixels",
+              radiusMinPixels: 2.2 * g.rMul,
+              opacity: g.op,
+              pickable: false,
+              updateTriggers: {
+                getRadius: [pointRadius, glowSpread],
+                getFillColor: [colorMode],
+              },
+            })
+        ),
       new ScatterplotLayer({
         id: "points",
         data: {
@@ -276,7 +315,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     labelTier(1, tier1Opacity, 13); // broad: larger text, fades out by ~38%
     labelTier(2, tier2Opacity, 11); // finer: smaller text, fades in ~30-40%
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, tier1Opacity, tier2Opacity, colorMode]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, tier1Opacity, tier2Opacity, colorMode, glowSpread]);
 
   return (
     <div className="exploremap" ref={ref}>
