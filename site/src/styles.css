@@ -176,7 +176,11 @@ body {
   padding: 16px 20px 20px;
 }
 
-.plotpage__header { flex: 0 0 auto; margin-bottom: 8px; }
+/* Consistent header height so the plot stage (and the PNG's axes box) lands at
+   the SAME place regardless of whether a plot has a 0-, 1-, or 2-line subtitle.
+   This is what made e.g. Typical Popularity's box sit lower than Popularity
+   Curve's. */
+.plotpage__header { flex: 0 0 auto; min-height: 74px; margin-bottom: 8px; }
 
 .plotpage__title {
   margin: 0;
