@@ -131,6 +131,11 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     const init: VS = { target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: z };
     viewStateRef.current = init;
     setViewState(init);
+    // Arm the framing effect now that the map is ready -- otherwise its "skip the
+    // first run" guard (which the async mount run never reaches) would eat the
+    // user's FIRST plot click instead of the mount, leaving the slice on the
+    // empty bottom of the field.
+    framingMounted.current = true;
   }, [data, size, viewState]);
 
   // Center the selected handle. NEVER changes zoom (the user pans/zooms freely),
@@ -238,8 +243,10 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     return Math.min(data.n, Math.round(LOD_BASE * Math.pow(growth, zoomDelta)));
   }, [data, viewState, zoomDelta]);
   // Tiny crisp dots at the overview (the density background carries the color
-  // there); grow gently as you zoom in for hover/click.
-  const pointRadius = clamp(0.35 + 0.45 * zoomDelta, 0.35, 4.5);
+  // there); grow gently as you zoom in for hover/click. Halve them on phones --
+  // the same pixel radius reads far too thick/bright on a small screen.
+  const mobileScale = size.width > 0 && size.width < 640 ? 0.5 : 1;
+  const pointRadius = clamp(0.35 + 0.45 * zoomDelta, 0.35, 4.5) * mobileScale;
   const zoomPct = Math.round((zoomDelta / ZOOM_SPAN) * 100);
   // Density-color background: full until ~15% zoom, then linear out to nothing
   // by ~50% (so ~62% at 27%, ~35% at 37%, ~11% at 46%), leaving just the dots.
@@ -303,9 +310,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
                 getFillColor: { value: activeColors, size: 3 },
               },
             },
-            getRadius: clamp(pointRadius * 3.5, 2.2, 16) * g.rMul,
+            getRadius: clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * g.rMul,
             radiusUnits: "pixels",
-            radiusMinPixels: 2.2 * g.rMul,
+            radiusMinPixels: 2.2 * mobileScale * g.rMul,
             opacity: g.op,
             pickable: false,
             updateTriggers: {
@@ -325,7 +332,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
         },
         getRadius: pointRadius,
         radiusUnits: "pixels",
-        radiusMinPixels: 0.4,
+        radiusMinPixels: 0.4 * mobileScale,
         opacity: 0.85,
         pickable: true,
         autoHighlight: true,

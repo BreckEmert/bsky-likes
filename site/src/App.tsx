@@ -104,6 +104,15 @@ export default function App() {
                 setActiveId(id);
                 setView("plots");
               }}
+              leading={
+                <>
+                  Explore some
+                  <br />
+                  premade plots
+                  <br />
+                  with the data!
+                </>
+              }
             />
             <PlotPage
               plot={active}
