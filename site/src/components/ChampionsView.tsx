@@ -61,9 +61,9 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
   const [hover, setHover] = useState<{ c: Champion; x: number; y: number } | null>(null);
   const [metric, setMetric] = useState<string | null>(null);
   const [layout, setLayout] = useState<"topic" | "community">("topic");
-  // user-search: floats the searched user's community/topic to the top.
-  // handles.bin is already cached from the cluster map, so this is cheap.
-  const [searchHandle, setSearchHandle] = useState<string | null>(null);
+  // user-search floats the searched user's community/topic to the top. Uses the
+  // GLOBAL selectedHandle so a search done on the cluster map carries over here
+  // (and vice-versa). handles.bin is already cached from the map, so this is cheap.
   const members = useChampionMembers(true);
 
   if (!data) {
@@ -89,11 +89,11 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
 
   // resolve the searched handle -> its sub + topic, and float those rows up
   const matchedSub =
-    searchHandle != null ? members?.subOf.get(searchHandle.toLowerCase()) : undefined;
+    selectedHandle != null ? members?.subOf.get(selectedHandle.toLowerCase()) : undefined;
   const subToTopic = new Map<number, number>();
   active.communities.forEach((c) => subToTopic.set(c.sub, c.topic));
   const matchedTopic = matchedSub != null ? subToTopic.get(matchedSub) : undefined;
-  const notInCommunity = searchHandle != null && members != null && matchedSub == null;
+  const notInCommunity = selectedHandle != null && members != null && matchedSub == null;
   const orderedTopics =
     matchedTopic == null
       ? active.topics
@@ -117,8 +117,8 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
         <div className="champs__intro">
           <div className="champs__title">Who does each community rally around?</div>
           <div className="champs__stat">
-            <span className="champs__midchip">{nonFamousPct}% non-famous</span> — under
-            this lens, that share of communities are led by an account with under 50k
+            <span className="champs__midchip">{nonFamousPct}% non-famous</span> under
+            this lens: that share of communities are led by an account with under 50k
             followers.
           </div>
           <div className="champs__controls">
@@ -160,12 +160,12 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
           <div className="champs__search">
             <SearchBox
               index={members?.handles ?? []}
-              selected={searchHandle}
-              onSelect={setSearchHandle}
+              selected={selectedHandle}
+              onSelect={onSelectHandle}
             />
             {notInCommunity && (
               <div className="champs__nomatch">
-                @{searchHandle} isn’t in a clustered community
+                @{selectedHandle} isn’t in a clustered community
               </div>
             )}
           </div>

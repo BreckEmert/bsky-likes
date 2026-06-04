@@ -873,12 +873,12 @@ body {
      where the light falls; a fainter screen pass (below) brightens the dark bg
      so you can actually SEE where the spotlight is. */
   mix-blend-mode: soft-light;
-  opacity: 0.7;
+  opacity: 0.595; /* spotlight power, 15% softer */
 }
 /* The 'brighten the black too' pass -- faint additive light. */
 .exploremap__atmosphere--screen {
   mix-blend-mode: screen;
-  opacity: 0.3;
+  opacity: 0.255;
 }
 /* Gentle global saturation lift on the dot field (reversible: drop this rule). */
 .exploremap canvas:not(.exploremap__atmosphere) {
