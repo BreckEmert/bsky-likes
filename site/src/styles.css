@@ -730,9 +730,9 @@ body {
   text-align: right;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1.12;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* wrap to (up to) two lines instead of cutting the name off */
 }
 .champrow__cells {
   flex: 1 1 auto;
@@ -976,10 +976,21 @@ body {
   .champs__title { font-size: 15px; }
   .champs__tech { font-size: 11.5px; }
   .champs__stat { white-space: normal; }
-  /* Don't compress the cells into unreadable @handles -- scroll each row
-     horizontally instead, with a readable fixed cell width. */
-  .champrow__topic { flex: 0 0 78px; font-size: 11px; }
-  .champrow__cells { gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+  /* Don't compress the cells into unreadable @handles. Instead the WHOLE tree
+     scrolls horizontally as ONE element (rows stay in sync); the topic titles
+     stick to the left so they're always visible. */
+  .champs__tree { overflow-x: auto; }
+  .champrow { width: max-content; }
+  .champrow__topic {
+    flex: 0 0 96px;
+    font-size: 11px;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #0a0d12;
+    padding-right: 4px;
+  }
+  .champrow__cells { gap: 4px; }
   .champcell {
     flex: 0 0 auto;
     min-width: 150px;
