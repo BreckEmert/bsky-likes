@@ -8,6 +8,8 @@ import {
 } from "../lib/useChampions.ts";
 import { MapTitleSwitch, type MapView } from "./MapTitleSwitch.tsx";
 import { ProfileCard } from "./ProfileCard.tsx";
+import { SearchBox } from "./SearchBox.tsx";
+import { useChampionMembers } from "../lib/useChampionMembers.ts";
 
 interface Props {
   view: MapView;
@@ -59,6 +61,10 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
   const [hover, setHover] = useState<{ c: Champion; x: number; y: number } | null>(null);
   const [metric, setMetric] = useState<string | null>(null);
   const [layout, setLayout] = useState<"topic" | "community">("topic");
+  // user-search: floats the searched user's community/topic to the top.
+  // handles.bin is already cached from the cluster map, so this is cheap.
+  const [searchHandle, setSearchHandle] = useState<string | null>(null);
+  const members = useChampionMembers(true);
 
   if (!data) {
     return (
@@ -80,6 +86,28 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
   const cc = active.classCounts;
   const total = cc.upper + cc.middle + cc.lower || 1;
   const nonFamousPct = Math.round(((cc.middle + cc.lower) / total) * 100);
+
+  // resolve the searched handle -> its sub + topic, and float those rows up
+  const matchedSub =
+    searchHandle != null ? members?.subOf.get(searchHandle.toLowerCase()) : undefined;
+  const subToTopic = new Map<number, number>();
+  active.communities.forEach((c) => subToTopic.set(c.sub, c.topic));
+  const matchedTopic = matchedSub != null ? subToTopic.get(matchedSub) : undefined;
+  const notInCommunity = searchHandle != null && members != null && matchedSub == null;
+  const orderedTopics =
+    matchedTopic == null
+      ? active.topics
+      : [
+          ...active.topics.filter((t) => t.topic === matchedTopic),
+          ...active.topics.filter((t) => t.topic !== matchedTopic),
+        ];
+  const orderedCommunities =
+    matchedSub == null
+      ? active.communities
+      : [
+          ...active.communities.filter((c) => c.sub === matchedSub),
+          ...active.communities.filter((c) => c.sub !== matchedSub),
+        ];
 
   return (
     <div className="champs">
@@ -129,6 +157,18 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
               </button>
             </div>
           </div>
+          <div className="champs__search">
+            <SearchBox
+              index={members?.handles ?? []}
+              selected={searchHandle}
+              onSelect={setSearchHandle}
+            />
+            {notInCommunity && (
+              <div className="champs__nomatch">
+                @{searchHandle} isn’t in a clustered community
+              </div>
+            )}
+          </div>
         </div>
         <ul className="champs__legend">
           {(["upper", "middle", "lower"] as ChampClass[]).map((k) => (
@@ -144,12 +184,15 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
 
       <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
         {layout === "topic"
-          ? active.topics.map((t) => {
+          ? orderedTopics.map((t) => {
               const sum = t.champions.reduce((s, c) => s + c.subSize, 0) || 1;
               // widest bar (biggest community) first, left-to-right
               const cells = [...t.champions].sort((a, b) => b.subSize - a.subSize);
               return (
-                <div className="champrow" key={t.topic}>
+                <div
+                  className={"champrow" + (t.topic === matchedTopic ? " champrow--match" : "")}
+                  key={t.topic}
+                >
                   <div
                     className="champrow__topic"
                     style={{ color: `rgb(${t.color[0]},${t.color[1]},${t.color[2]})` }}
@@ -176,11 +219,14 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                 </div>
               );
             })
-          : active.communities.map((co) => {
+          : orderedCommunities.map((co) => {
               // by-community bar ∝ the active lens's ranking value, so the order is visible
               const vsum = co.champions.reduce((s, ch) => s + ch.value, 0) || 1;
               return (
-                <div className="champrow" key={co.sub}>
+                <div
+                  className={"champrow" + (co.sub === matchedSub ? " champrow--match" : "")}
+                  key={co.sub}
+                >
                   <div
                     className="champrow__topic champrow__topic--wide"
                     style={{ color: `rgb(${co.color[0]},${co.color[1]},${co.color[2]})` }}

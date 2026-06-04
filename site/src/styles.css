@@ -758,11 +758,19 @@ body {
   flex-direction: column;
   gap: 7px;
 }
+/* user-search: floats the searched user's row to the top + highlights it */
+.champs__search { margin-top: 10px; width: 100%; max-width: 300px; }
+.champs__nomatch { margin-top: 5px; font-size: 12px; color: var(--muted); }
 .champrow {
   display: flex;
   align-items: stretch;
   gap: 10px;
   min-height: 44px; /* room for the sub-community name + the @handle */
+}
+.champrow--match {
+  outline: 1.5px solid rgba(29, 155, 240, 0.45);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 .champrow__topic {
   flex: 0 0 150px;

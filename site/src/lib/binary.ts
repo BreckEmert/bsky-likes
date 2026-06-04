@@ -22,7 +22,7 @@ export interface PointData {
   get(handle: string): [number, number] | undefined;
 }
 
-function parseHandles(buf: ArrayBuffer): string[] {
+export function parseHandles(buf: ArrayBuffer): string[] {
   const dv = new DataView(buf);
   const count = dv.getUint32(0, true);
   const offsets = new Uint32Array(buf, 4, count + 1);
