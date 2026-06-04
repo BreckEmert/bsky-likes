@@ -170,9 +170,13 @@ for t in topics.values():
 #     niche accounts while mainstream subs top out near 2x, so a single cutoff either
 #     floods or empties. Top-K is bounded and consistent: every sub gets up to K.) ---
 topk = (
-    sa.sort("lift", descending=True).group_by("sub").head(TOP_K)
-    .join(users, left_on="post_author_did", right_on="did", how="left")
+    sa.join(users, left_on="post_author_did", right_on="did", how="left")
+    # drop unresolved/deleted accounts (null handle) BEFORE taking the top K, so a
+    # community always backfills to K real champions instead of silently showing fewer
+    .filter(pl.col("handle").is_not_null())
     .join(sub_topic, on="sub", how="left")
+    .sort("lift", descending=True)  # sort LAST so group_by().head() takes top-K by lift
+    .group_by("sub").head(TOP_K)
 )
 communities: dict = {}
 for r in topk.sort("lift", descending=True).to_dicts():

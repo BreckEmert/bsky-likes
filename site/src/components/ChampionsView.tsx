@@ -182,13 +182,29 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
         >
           <div className="champs__tip-h">@{hover.c.handle}</div>
           {hover.c.subName && (
-            <div className="champs__tip-sub">champion of {hover.c.subName}</div>
+            <div className="champs__tip-sub">
+              {layout === "community" ? "in" : "champion of"} {hover.c.subName}
+            </div>
           )}
-          <div className="champs__tip-r">
-            owns <b>{hover.c.subSize.toLocaleString()}</b> users · likes them{" "}
-            <b>{hover.c.lift}×</b> more than average ·{" "}
-            <b>{hover.c.followers.toLocaleString()}</b> followers
-          </div>
+          {layout === "community" ? (
+            // per-champion metrics that actually differ within a community:
+            // how many of its members like them, lift, and their fame
+            <div className="champs__tip-r">
+              liked by{" "}
+              <b>
+                {Math.round((hover.c.supporters / hover.c.subSize) * 100)}%
+              </b>{" "}
+              of the community ({hover.c.supporters.toLocaleString()} of{" "}
+              {hover.c.subSize.toLocaleString()}) · <b>{hover.c.lift}×</b> vs the
+              site average · <b>{hover.c.followers.toLocaleString()}</b> followers
+            </div>
+          ) : (
+            <div className="champs__tip-r">
+              owns <b>{hover.c.subSize.toLocaleString()}</b> users · likes them{" "}
+              <b>{hover.c.lift}×</b> more than average ·{" "}
+              <b>{hover.c.followers.toLocaleString()}</b> followers
+            </div>
+          )}
         </div>
       )}
 
