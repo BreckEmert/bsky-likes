@@ -741,7 +741,9 @@ body {
   min-width: 0;
 }
 .champcell {
-  flex: 1 1 0;
+  flex-grow: var(--cw, 1); /* desktop: width ∝ community size (strip treemap) */
+  flex-shrink: 1;
+  flex-basis: 0;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -974,7 +976,29 @@ body {
   .champs__title { font-size: 15px; }
   .champs__tech { font-size: 11.5px; }
   .champs__stat { white-space: normal; }
-  .champrow__topic { flex: 0 0 84px; font-size: 11px; }
-  .champrow__cells { gap: 2px; }
-  .champcell { font-size: 11px; padding: 3px 5px; }
+  /* Don't compress the cells into unreadable @handles -- scroll each row
+     horizontally instead, with a readable fixed cell width. */
+  .champrow__topic { flex: 0 0 78px; font-size: 11px; }
+  .champrow__cells { gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+  .champcell {
+    flex: 0 0 auto;
+    min-width: 150px;
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  /* No hover on touch: keep the climb-up chevron permanently visible on plots. */
+  .app--plots .mapchev { opacity: 0.5; pointer-events: auto; }
+
+  /* Drop the zoom/points readout; let the selected profile card take the bottom
+     of the top pane (above the tab bar), where there's room. */
+  .exploremap__zoom { display: none; }
+  .profilecard {
+    top: auto;
+    bottom: 8px; /* bottom of the top pane, just above the tab bar peek */
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+  }
 }

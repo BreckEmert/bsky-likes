@@ -83,11 +83,13 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                 {t.name}
               </div>
               <div className="champrow__cells">
-                {t.champions.map((c) => (
+                {t.champions.map((c, i) => (
                   <button
-                    key={c.handle}
+                    // a handle can champion two sub-communities (e.g. tobyfox),
+                    // so the index keeps the key unique.
+                    key={c.handle + "-" + i}
                     className={"champcell champcell--" + c.class}
-                    style={{ flexGrow: c.subSize / sum }}
+                    style={{ ["--cw" as string]: String(c.subSize / sum) }}
                     onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                     onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setHover(null)}
@@ -103,7 +105,14 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
       </div>
 
       {hover && (
-        <div className="champs__tip" style={{ left: hover.x + 14, top: hover.y + 14 }}>
+        <div
+          className="champs__tip"
+          style={{
+            // clamp to the viewport so rightmost/bottom champions aren't offscreen
+            left: Math.min(hover.x + 14, window.innerWidth - 332),
+            top: Math.min(hover.y + 14, window.innerHeight - 90),
+          }}
+        >
           <div className="champs__tip-h">@{hover.c.handle}</div>
           <div className="champs__tip-r">
             owns <b>{hover.c.subSize.toLocaleString()}</b> users · likes them{" "}

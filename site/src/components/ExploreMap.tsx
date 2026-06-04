@@ -207,9 +207,11 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           zoom: cur.zoom,
         };
       } else {
-        // No search: keep the user's current view (the slice shows the bottom of
-        // what they were looking at). Tunable later if a fixed framing is wanted.
-        dest = cur;
+        // No search: shift so the user's CENTER lands in the visible slice --
+        // without this the slice shows the empty bottom of the field below them
+        // (the "black window").
+        const dy = sliceOffsetWorld(cur.zoom);
+        dest = { target: [cur.target[0], cur.target[1] + dy, 0], zoom: cur.zoom };
       }
     } else {
       dest = savedViewRef.current ?? {
