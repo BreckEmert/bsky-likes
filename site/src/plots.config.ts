@@ -88,7 +88,8 @@ const RAW_PLOTS: PlotConfig[] = [
     id: "leaderboards",
     tabLabel: "Most & Least",
     title: "Who likes the most (and least) popular posts?",
-    subtitle: null,
+    subtitle:
+      "bar length = the average popularity of the posts they like (log of like-count)",
     image: null,
     searchable: true,
     tabAnim: "rising-bars",
@@ -151,7 +152,8 @@ const RAW_PLOTS: PlotConfig[] = [
     id: "wakes-up",
     tabLabel: "Activity by Hour",
     title: "When Bluesky Wakes Up",
-    subtitle: null,
+    subtitle:
+      "likes by hour of day (UTC) across the week — the base skews US/Europe, so it peaks in the American afternoon",
     image: "/plots/wakes-up.png",
     searchable: false,
     tabAnim: "pulse-grid",
@@ -162,7 +164,8 @@ const RAW_PLOTS: PlotConfig[] = [
     id: "long-tail",
     tabLabel: "Attention Inequality",
     title: "How unequal is attention on Bluesky?",
-    subtitle: null,
+    subtitle:
+      "a Lorenz curve — the deeper it bows below the diagonal, the more unequal: a sliver of posts gets most of the likes",
     image: "/plots/long-tail.png",
     searchable: false,
     tabAnim: "draw-curve",
