@@ -6,9 +6,11 @@
   --muted: #9aa4b1;
   --accent: #1d9bf0;
   --tabbar-h: 88px;
-  --seam-h: 156px;   /* height of the persistent center bar (chevron + tabs) */
-  --slide-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --slide-dur: 0.85s;
+  /* Bounded two-section layout. Each section is (100vh - peek), so the other
+     section's edge (map bottom / plots tab bar) always peeks on screen. */
+  --map-peek: 15vh;                       /* always-visible slice of the off half */
+  --section-h: 85vh;                      /* = 100vh - map-peek */
+  --slide-y: 70vh;                        /* = section-h - map-peek (focus shift) */
 }
 
 * { box-sizing: border-box; }
@@ -25,100 +27,67 @@ body {
   overflow: hidden;            /* no page scroll -- navigation is click-to-slide */
 }
 
-/* No scroll: the whole app is exactly one viewport. The two panes are stacked
-   in a 200vh slider that translates up/down; a persistent center bar rides the
-   seam between them. */
+/* No page scroll: the app is exactly one viewport. The two stacked sections
+   slide as a unit, bounded so the seam (map bottom + plots tab bar) is always
+   on screen. The bars themselves never animate -- only the deck camera does. */
 .app {
   position: relative;
   height: 100vh;
   overflow: hidden;
 }
-
-/* The sliding stack of the two full-height panes. */
 .stage {
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  height: 200vh;
-  transition: transform var(--slide-dur) var(--slide-ease);
   will-change: transform;
 }
+/* Map focused: top of stack shows; plots' tab bar peeks at the bottom.
+   Plots focused: shift up by --slide-y; map's bottom slice peeks at the top. */
 .app--map .stage { transform: translateY(0); }
-.app--plots .stage { transform: translateY(-100vh); }
+.app--plots .stage { transform: translateY(calc(-1 * var(--slide-y))); }
 
-.pane {
+/* Top: the exploration map. */
+.explore {
   position: relative;
-  height: 100vh;
-}
-/* The plots pane's content clears the bar when the bar is docked at the top. */
-.pane--plots { padding-top: var(--seam-h); }
-
-/* ---- Persistent center bar (tabs + long centered chevron) ---- */
-/* Fixed to the viewport so it never scrolls away; rides from the bottom edge
-   (map focus) to the top edge (plots focus), tracking the slide. */
-.seambar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: var(--seam-h);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, rgba(14, 17, 22, 0.86), rgba(14, 17, 22, 0.97));
-  backdrop-filter: blur(6px);
-  transition: transform var(--slide-dur) var(--slide-ease);
-  will-change: transform;
-}
-.app--plots .seambar {
-  transform: translateY(0);                  /* docked at the top edge */
+  height: var(--section-h);
   border-bottom: 1px solid var(--panel);
 }
-.app--map .seambar {
-  transform: translateY(calc(100vh - var(--seam-h)));  /* docked at the bottom */
-  flex-direction: column-reverse;            /* chevron on the outer (bottom) edge */
-  border-top: 1px solid var(--panel);
-}
 
-/* The long, centered chevron button that toggles map<->plots. */
-.seambar__chev {
-  flex: 0 0 auto;
+/* The single climb-up chevron, centered across the map's bottom slice. Inert
+   while the map is focused; when the plots are focused that slice is the strip
+   at the very top of the screen -- hovering it reveals the arrow. */
+.mapchev {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--map-peek);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  width: min(640px, 64vw);     /* ~4x the old left-column chevron, centered */
-  height: 64px;
-  margin: 0 auto;
-  padding: 6px 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  z-index: 6;
 }
-.seambar__chev:hover { opacity: 0.92; }
-.seambar__svg {
-  width: 100%;
-  height: 26px;
+.app--plots .mapchev { pointer-events: auto; }
+.app--plots .mapchev:hover { opacity: 0.65; }
+.mapchev__svg {
+  width: min(520px, 56vw);
+  height: 60%;
   display: block;
 }
-.app--plots .seambar__svg { transform: scaleY(-1); }  /* point up (toward the map) */
-.seambar__svg polyline {
+.mapchev__svg polyline {
   fill: none;
   stroke: #e6edf3;
   stroke-width: 2.6;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-}
-.seambar__hint {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--muted);
 }
 
 /* Search box over the map (top-left). */
@@ -131,14 +100,31 @@ body {
   max-width: 70%;
 }
 
-/* The plots pane fills its half; PlotPage stretches inside it (flex child). */
-.pane--plots {
+/* Bottom: the premade-plots section -- left label + the tabbed plot area. Its
+   tab bar peeks at the bottom of the screen while the map is focused. */
+.plots {
+  display: flex;
+  height: var(--section-h);
+  position: relative;
+}
+.plots__label {
+  flex: 0 0 170px;
+  padding: 28px 18px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--muted);
+  border-right: 1px solid var(--panel);
+  white-space: nowrap; /* lock each line so words never re-wrap mid-phrase */
+}
+.plots__main {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-/* ---- Tab bar (inside the persistent center bar) ---- */
+/* ---- Tab bar (top of the plots section) ---- */
 .tabbar {
   flex: 0 0 var(--tabbar-h);
   display: flex;
@@ -584,7 +570,7 @@ body {
 .exploremap__zoom {
   position: absolute;
   right: 12px;
-  bottom: calc(var(--seam-h) + 12px);  /* sit just above the persistent bar */
+  bottom: 12px;
   z-index: 6;
   padding: 5px 10px;
   font-size: 12px;

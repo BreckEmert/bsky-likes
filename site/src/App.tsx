@@ -4,15 +4,14 @@ import { TabBar } from "./components/TabBar.tsx";
 import { PlotPage } from "./components/PlotPage.tsx";
 import { ExploreMap } from "./components/ExploreMap.tsx";
 
-// A wide stack of layered chevrons ("<<<" turned to point vertically). White
-// hairlines, no fill/box. Points down by default (toward the plots); flipped to
-// point up via CSS when we're viewing the plots (toward the map).
+// A wide stack of layered chevrons pointing UP -- the single affordance to
+// climb back from the plots to the map. White hairlines, no fill/box.
 function ChevronStack() {
   return (
-    <svg className="seambar__svg" viewBox="0 0 130 38" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points="14,6 65,15 116,6" />
-      <polyline points="14,17 65,26 116,17" />
-      <polyline points="14,28 65,37 116,28" />
+    <svg className="mapchev__svg" viewBox="0 0 130 38" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="14,15 65,6 116,15" />
+      <polyline points="14,26 65,17 116,26" />
+      <polyline points="14,37 65,28 116,37" />
     </svg>
   );
 }
@@ -21,55 +20,62 @@ export default function App() {
   const [activeId, setActiveId] = useState(PLOTS[0].id);
   // One global selected handle, shared by the map and every plot (persists).
   const [selectedHandle, setSelectedHandle] = useState<string | null>(null);
-  // Which half has focus. There's no free scroll; you slide between the two by
-  // clicking the persistent center bar (or a plot tab, which jumps to plots).
+  // Which half is focused. No free scroll: the page is bounded so the map's
+  // bottom and the plots' top (the tab bar) are always on screen. Clicking a
+  // plot title focuses the plots; the map's hover-chevron climbs back up. The
+  // only thing that animates is the deck camera (it reframes so the visible map
+  // slice keeps your view instead of showing random bottom dots).
   const [view, setView] = useState<"map" | "plots">("map");
 
   const active = PLOTS.find((p) => p.id === activeId) ?? PLOTS[0];
-  const toggle = () => setView((v) => (v === "map" ? "plots" : "map"));
 
   return (
     <div className={"app app--" + view}>
-      {/* The two full-height panes, stacked; the stack slides up/down. */}
       <div className="stage">
-        <section className="pane pane--map">
+        {/* Top: the explorable t-SNE field of users. */}
+        <section className="explore">
           <ExploreMap
             selectedHandle={selectedHandle}
             onSelectHandle={setSelectedHandle}
             framing={view === "plots" ? "pretty" : "user"}
           />
+          {/* The one chevron: centered in the map's bottom slice. Inert while
+              the map is focused; when the plots are focused that slice sits at
+              the top of the screen and hovering it reveals the climb-up arrow. */}
+          <button
+            className="mapchev"
+            aria-label="back up to the map"
+            onClick={() => setView("map")}
+          >
+            <ChevronStack />
+          </button>
         </section>
-        <section className="pane pane--plots">
-          <PlotPage
-            plot={active}
-            selectedHandle={selectedHandle}
-            onSelectHandle={setSelectedHandle}
-          />
-        </section>
-      </div>
 
-      {/* Persistent center bar: always on screen, rides from the bottom edge
-          (map focus) to the top edge (plots focus). Holds the plot tabs (always
-          reachable) + a long centered chevron that toggles the view. */}
-      <div className="seambar">
-        <button
-          className="seambar__chev"
-          aria-label={view === "map" ? "go down to the plots" : "back up to the map"}
-          onClick={toggle}
-        >
-          <ChevronStack />
-          <span className="seambar__hint">
-            {view === "map" ? "the premade plots" : "back to the cluster map"}
-          </span>
-        </button>
-        <TabBar
-          plots={PLOTS}
-          activeId={activeId}
-          onSelect={(id) => {
-            setActiveId(id);
-            setView("plots");
-          }}
-        />
+        {/* Bottom: the premade plots, with the left label + tabs, as before. */}
+        <section className="plots">
+          <div className="plots__label">
+            Explore some
+            <br />
+            premade plots
+            <br />
+            with the data!
+          </div>
+          <div className="plots__main">
+            <TabBar
+              plots={PLOTS}
+              activeId={activeId}
+              onSelect={(id) => {
+                setActiveId(id);
+                setView("plots");
+              }}
+            />
+            <PlotPage
+              plot={active}
+              selectedHandle={selectedHandle}
+              onSelectHandle={setSelectedHandle}
+            />
+          </div>
+        </section>
       </div>
     </div>
   );

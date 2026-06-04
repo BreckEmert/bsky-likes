@@ -18,10 +18,13 @@ interface Props {
   framing?: "user" | "pretty";
 }
 
-// The preset "prettiest" framing shown while the plots have focus. Fractions of
-// the data bounds for the center, plus how far into the zoom range to push.
-// Guessed for now -- easy to tune.
-const PRETTY = { cx: 0.5, cy: 0.52, zoomFrac: 0.34 };
+// When the plots take focus, only the bottom slice of the map stays on screen.
+// We pan the camera DOWN by this many vh (keeping the user's x + zoom) so the
+// content they had centered lands in that slice -- instead of whatever random
+// dots happened to be at the bottom. Sign/size tunable; verified visually.
+// ~35 == (screen-center -> center of the 15vh top slice), so the subject the
+// user had centered lands dead-center in the visible strip.
+const SLICE_SHIFT_VH = 35;
 
 interface VS {
   target: [number, number, number];
@@ -114,15 +117,13 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     const b = data.bounds;
     let dest: VS;
     if (framing === "pretty") {
-      savedViewRef.current = viewStateRef.current;
-      dest = {
-        target: [
-          b.xMin + (b.xMax - b.xMin) * PRETTY.cx,
-          b.yMin + (b.yMax - b.yMin) * PRETTY.cy,
-          0,
-        ],
-        zoom: initialZoom.current + ZOOM_SPAN * PRETTY.zoomFrac,
-      };
+      const cur = viewStateRef.current ?? viewState;
+      savedViewRef.current = cur;
+      // Pan down so the user's centered content lands in the visible map slice;
+      // keep their x and zoom (their framing) untouched.
+      const vh = window.innerHeight / 100;
+      const dy = (SLICE_SHIFT_VH * vh) / Math.pow(2, cur.zoom);
+      dest = { target: [cur.target[0], cur.target[1] + dy, 0], zoom: cur.zoom };
     } else {
       dest = savedViewRef.current ?? {
         target: [(b.xMin + b.xMax) / 2, (b.yMin + b.yMax) / 2, 0],
