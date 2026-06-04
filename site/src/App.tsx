@@ -98,7 +98,12 @@ export default function App() {
             activeId={activeId}
             onSelect={(id) => {
               setActiveId(id);
-              scrollTo(plotsRef);
+              // Only scroll down to the plots if we're still up on the map.
+              // If the plots are already in view, re-scrolling yanks the
+              // section's top back to the viewport top -- the "glitch" where
+              // you briefly see the plots header again on every tab switch.
+              const top = plotsRef.current?.getBoundingClientRect().top ?? 0;
+              if (top > 120) scrollTo(plotsRef);
             }}
           />
           <PlotPage
