@@ -12,6 +12,10 @@
   --map-peek: var(--tabbar-h);            /* always-visible slice of the off half */
   --section-h: calc(100vh - var(--tabbar-h));     /* focused half fills the rest */
   --slide-y: calc(100vh - 2 * var(--tabbar-h));   /* focus shift = section-h - peek */
+  /* The section slide is animated and time-matched to the map's camera reframe
+     (850ms in ExploreMap), so the screen pans while the map pans. */
+  --slide-dur: 0.85s;
+  --slide-ease: cubic-bezier(0.33, 0, 0.2, 1);
 }
 
 * { box-sizing: border-box; }
@@ -41,12 +45,16 @@ body {
   left: 0;
   right: 0;
   top: 0;
+  transition: transform var(--slide-dur) var(--slide-ease);
   will-change: transform;
 }
 /* Map focused: top of stack shows; plots' tab bar peeks at the bottom.
    Plots focused: shift up by --slide-y; map's bottom slice peeks at the top. */
 .app--map .stage { transform: translateY(0); }
-.app--plots .stage { transform: translateY(calc(-1 * var(--slide-y))); }
+/* No var() in the transitioned value -> the slide stays on the GPU compositor,
+   so it's smooth even while the map's camera fly-to is busy on the main thread.
+   176px = 2 * --tabbar-h. */
+.app--plots .stage { transform: translateY(calc(176px - 100vh)); }
 
 /* Top: the exploration map. */
 .explore {
@@ -110,11 +118,20 @@ body {
   position: relative;
 }
 .plots__label {
-  flex: 0 0 170px;
-  padding: 28px 18px;
-  font-size: 18px;
+  flex: 0 0 184px;
+  /* Vertically centered on the tab row (height var(--tabbar-h)) so the label's
+     center lines up with the center of the plot-title buttons; horizontally
+     centered text. */
+  height: var(--tabbar-h);
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  font-size: 14.5px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.3;
+  text-align: center;
   color: var(--muted);
   border-right: 1px solid var(--panel);
   white-space: nowrap; /* lock each line so words never re-wrap mid-phrase */
@@ -302,23 +319,28 @@ body {
   color: var(--text);
 }
 
+/* Sits to the RIGHT of the search box (top-left pinned to the box's top-right)
+   so it never covers the plot below the search. */
 .plotpage__nothere {
-  margin-top: 6px;
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  width: 215px;
+  margin: 0;
   padding: 5px 9px;
   font-size: 12px;
   color: var(--muted);
   background: rgba(17, 21, 27, 0.92);
   border: 1px solid var(--panel);
   border-radius: 8px;
-  display: inline-block;
 }
 
 /* ---- "Highlight 15 you follow" control (punching plot) ---- */
 .followshl { width: 300px; max-width: 78vw; }
 .followshl__row { display: flex; gap: 6px; }
+.followshl__field { position: relative; flex: 1 1 auto; min-width: 0; }
 .followshl__input {
-  flex: 1 1 auto;
-  min-width: 0;
+  width: 100%;
   padding: 8px 10px;
   font-size: 13px;
   color: var(--text);
@@ -328,6 +350,53 @@ body {
   outline: none;
 }
 .followshl__input:focus { border-color: #ec4899; }
+
+/* Live handle typeahead dropdown. */
+.followshl__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 8;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  background: rgba(17, 21, 27, 0.98);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.followshl__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.followshl__item:hover { background: var(--panel); }
+.followshl__avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  object-fit: cover;
+}
+.followshl__avatar--blank { background: var(--panel); }
+.followshl__sgh {
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.followshl__sgn {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .followshl__btn,
 .followshl__shuffle {
   flex: 0 0 auto;
@@ -523,6 +592,34 @@ body {
   overflow: hidden;
   background: #0a0d12;
 }
+/* Overview title -- makes it clear the map is people clustered by who they
+   like. Fades out (inline opacity) as you zoom in. */
+.exploremap__title {
+  position: absolute;
+  top: 6%;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.85);
+}
+.exploremap__title-main {
+  font-size: clamp(22px, 3.4vw, 46px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #f0f6fc;
+}
+.exploremap__title-sub {
+  margin-top: 2px;
+  font-size: clamp(13px, 1.5vw, 20px);
+  font-weight: 600;
+  color: #b6c1ce;
+}
+
 /* Animated atmosphere overlay (faint moving bloom + slow color waves). */
 .exploremap__atmosphere {
   position: absolute;

@@ -54,7 +54,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
   const framingMounted = useRef(false); // skip the initial framing effect run
   const prevSelectedRef = useRef<string | null>(null); // last selected handle (none->user detection)
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
-  const [colorMode, setColorMode] = useState<"continuum" | "topics">("continuum");
+  const [colorMode, setColorMode] = useState<"continuum" | "topics">("topics");
   const initialZoom = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
 
@@ -196,6 +196,10 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
     0,
     1
   );
+  // Overview-only title: makes it unmistakable that the map is people clustered
+  // by who they LIKE. Full at the fit, faded out by ~12% zoom (once region
+  // labels take over).
+  const titleOpacity = clamp((12 - zoomPct) / 12, 0, 1);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -372,6 +376,18 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
       )}
       {!data && <div className="exploremap__status">loading map…</div>}
 
+      {/* Overview title -- fades out as you zoom past the fit. */}
+      {data && titleOpacity > 0.01 && (
+        <div
+          className="exploremap__title"
+          style={{ opacity: titleOpacity }}
+          aria-hidden="true"
+        >
+          <span className="exploremap__title-main">Bluesky Users</span>
+          <span className="exploremap__title-sub">clustered by who they like</span>
+        </div>
+      )}
+
       <div className="exploremap__search">
         <SearchBox
           index={data ? data.handles : []}
@@ -385,16 +401,16 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
         <div className="exploremap__colormode">
           <div className="cmode__seg">
             <button
-              className={colorMode === "continuum" ? "is-on" : ""}
-              onClick={() => setColorMode("continuum")}
-            >
-              Continuum
-            </button>
-            <button
               className={colorMode === "topics" ? "is-on" : ""}
               onClick={() => setColorMode("topics")}
             >
               Topics
+            </button>
+            <button
+              className={colorMode === "continuum" ? "is-on" : ""}
+              onClick={() => setColorMode("continuum")}
+            >
+              Continuum
             </button>
           </div>
           {colorMode === "topics" && data.legend && (

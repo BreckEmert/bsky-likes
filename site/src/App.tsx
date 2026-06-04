@@ -54,11 +54,9 @@ export default function App() {
         {/* Bottom: the premade plots, with the left label + tabs, as before. */}
         <section className="plots">
           <div className="plots__label">
-            Explore some
+            Explore some premade
             <br />
-            premade plots
-            <br />
-            with the data!
+            plots with the data!
           </div>
           <div className="plots__main">
             <TabBar

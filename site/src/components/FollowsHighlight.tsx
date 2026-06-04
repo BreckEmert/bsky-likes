@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PointData } from "../lib/binary.ts";
-import { resolveHandle, getFollows } from "../lib/bsky.ts";
+import {
+  resolveHandle,
+  getFollows,
+  searchActorsTypeahead,
+  type ActorSuggestion,
+} from "../lib/bsky.ts";
 
 export interface FollowPicks {
   user: string | null; // the entered handle, if it's on the plot
@@ -32,6 +37,39 @@ export function FollowsHighlight({ points, onPicks }: Props) {
   const [status, setStatus] = useState<string | null>(null);
   const [pool, setPool] = useState<string[]>([]); // follows present on the plot
   const [user, setUser] = useState<string | null>(null);
+  // Live handle typeahead (Bluesky's own suggestions) as you type.
+  const [suggest, setSuggest] = useState<ActorSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<number | undefined>(undefined);
+  const seqRef = useRef(0); // drop out-of-order responses
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const onType = (v: string) => {
+    setHandle(v);
+    window.clearTimeout(debounceRef.current);
+    const q = v.trim();
+    if (q.length < 2) {
+      setSuggest([]);
+      setOpen(false);
+      return;
+    }
+    const seq = ++seqRef.current;
+    debounceRef.current = window.setTimeout(async () => {
+      const res = await searchActorsTypeahead(q);
+      if (seq === seqRef.current) {
+        setSuggest(res);
+        setOpen(res.length > 0);
+      }
+    }, 180);
+  };
 
   const reshuffle = (p = pool, u = user) => {
     onPicks({ user: u, picks: sample(p, N) });
@@ -70,20 +108,54 @@ export function FollowsHighlight({ points, onPicks }: Props) {
   };
 
   return (
-    <div className="followshl">
+    <div className="followshl" ref={boxRef}>
       <div className="followshl__row">
-        <input
-          className="followshl__input"
-          placeholder="your @handle"
-          value={handle}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          onChange={(e) => setHandle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") run();
-          }}
-        />
+        <div className="followshl__field">
+          <input
+            className="followshl__input"
+            placeholder="your @handle"
+            value={handle}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            onChange={(e) => onType(e.target.value)}
+            onFocus={() => suggest.length > 0 && setOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setOpen(false);
+                run();
+              } else if (e.key === "Escape") {
+                setOpen(false);
+              }
+            }}
+          />
+          {open && suggest.length > 0 && (
+            <ul className="followshl__list">
+              {suggest.map((s) => (
+                <li
+                  key={s.handle}
+                  className="followshl__item"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setHandle(s.handle);
+                    setSuggest([]);
+                    setOpen(false);
+                  }}
+                >
+                  {s.avatar ? (
+                    <img className="followshl__avatar" src={s.avatar} alt="" />
+                  ) : (
+                    <span className="followshl__avatar followshl__avatar--blank" />
+                  )}
+                  <span className="followshl__sgh">@{s.handle}</span>
+                  {s.displayName && (
+                    <span className="followshl__sgn">{s.displayName}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button className="followshl__btn" onClick={run} disabled={busy || !handle.trim()}>
           Highlight 15
         </button>

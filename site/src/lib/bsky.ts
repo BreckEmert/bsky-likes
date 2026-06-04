@@ -8,6 +8,37 @@ function cleanHandle(handle: string): string {
   return handle.trim().replace(/^@+/, "").toLowerCase();
 }
 
+export interface ActorSuggestion {
+  handle: string;
+  displayName?: string;
+  avatar?: string;
+}
+
+/** Live handle suggestions as you type (Bluesky's own typeahead). */
+export async function searchActorsTypeahead(
+  q: string,
+  limit = 8
+): Promise<ActorSuggestion[]> {
+  const query = cleanHandle(q);
+  if (!query) return [];
+  try {
+    const r = await fetch(
+      `${API}/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(query)}&limit=${limit}`
+    );
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.actors ?? []).map(
+      (a: { handle: string; displayName?: string; avatar?: string }) => ({
+        handle: a.handle,
+        displayName: a.displayName,
+        avatar: a.avatar,
+      })
+    );
+  } catch {
+    return [];
+  }
+}
+
 /** Resolve a handle (e.g. "hankgreen.bsky.social") to its DID. Throws if unknown. */
 export async function resolveHandle(handle: string): Promise<string> {
   const h = cleanHandle(handle);
