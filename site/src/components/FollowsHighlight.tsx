@@ -43,6 +43,7 @@ export function FollowsHighlight({ points, onPicks }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<number | undefined>(undefined);
   const seqRef = useRef(0); // drop out-of-order responses
+  const fetchedRef = useRef<string | null>(null); // handle the current pool is for
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -86,6 +87,7 @@ export function FollowsHighlight({ points, onPicks }: Props) {
       const present = [...new Set(follows.filter((h) => points.index.has(h)))];
       const me = handle.trim().replace(/^@+/, "").toLowerCase();
       const onPlot = points.index.has(me) ? me : null;
+      fetchedRef.current = me; // subsequent clicks for the same handle re-roll
       setPool(present);
       setUser(onPlot);
       if (!present.length) {
@@ -107,6 +109,15 @@ export function FollowsHighlight({ points, onPicks }: Props) {
     }
   };
 
+  // One button: first press (or a new handle) fetches; pressing again for the
+  // same handle just re-rolls a fresh 15.
+  const onButton = () => {
+    if (busy) return;
+    const cur = handle.trim().replace(/^@+/, "").toLowerCase();
+    if (pool.length > 0 && cur === fetchedRef.current) reshuffle();
+    else run();
+  };
+
   return (
     <div className="followshl" ref={boxRef}>
       <div className="followshl__row">
@@ -123,7 +134,7 @@ export function FollowsHighlight({ points, onPicks }: Props) {
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 setOpen(false);
-                run();
+                onButton();
               } else if (e.key === "Escape") {
                 setOpen(false);
               }
@@ -156,15 +167,14 @@ export function FollowsHighlight({ points, onPicks }: Props) {
             </ul>
           )}
         </div>
-        <button className="followshl__btn" onClick={run} disabled={busy || !handle.trim()}>
-          Highlight 15
+        <button
+          className="followshl__btn"
+          onClick={onButton}
+          disabled={busy || !handle.trim()}
+        >
+          🎲 Highlight 15 Followed
         </button>
       </div>
-      {pool.length > 0 && (
-        <button className="followshl__shuffle" onClick={() => reshuffle()} disabled={busy}>
-          🎲 shuffle 15 more
-        </button>
-      )}
       {status && <div className="followshl__status">{status}</div>}
     </div>
   );

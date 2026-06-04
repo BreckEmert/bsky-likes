@@ -105,7 +105,7 @@ body {
   position: absolute;
   top: 12px;
   left: 12px;
-  z-index: 6;
+  z-index: 12; /* above the color-mode buttons so the autocomplete isn't hidden */
   width: 280px;
   max-width: 70%;
 }

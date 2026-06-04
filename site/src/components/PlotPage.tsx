@@ -131,7 +131,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
         : (() => {
             const ranked = leaderboard.rankOf(sel);
             return ranked
-              ? `@${sel} ranks #${ranked.rank.toLocaleString()} of ${leaderboard.total.toLocaleString()} by mainstreaminess (1 = most viral)`
+              ? `@${sel} ranks #${ranked.rank.toLocaleString()} of ${leaderboard.total.toLocaleString()} by mainstreaminess (1 = likes the most viral)`
               : `@${sel} isn’t a ranked user (needs ≥50 likes)`;
           })()
       : null;
