@@ -5,6 +5,7 @@ export type ChampClass = "upper" | "middle" | "lower";
 
 export interface Champion {
   handle: string;
+  subName: string; // the finer-grained community this account owns (e.g. "Atproto Tinkerers")
   subSize: number; // users in the community this account owns
   supporters: number; // distinct members who like them
   lift: number; // how much more this community likes them vs everyone

@@ -95,6 +95,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                     onMouseLeave={() => setHover(null)}
                     onClick={() => onSelectHandle(c.handle)}
                   >
+                    {c.subName && <span className="champcell__sub">{c.subName}</span>}
                     <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
                   </button>
                 ))}
@@ -114,6 +115,9 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
           }}
         >
           <div className="champs__tip-h">@{hover.c.handle}</div>
+          {hover.c.subName && (
+            <div className="champs__tip-sub">champion of {hover.c.subName}</div>
+          )}
           <div className="champs__tip-r">
             owns <b>{hover.c.subSize.toLocaleString()}</b> users · likes them{" "}
             <b>{hover.c.lift}×</b> more than average ·{" "}

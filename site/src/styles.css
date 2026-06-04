@@ -659,7 +659,7 @@ body {
   border-radius: 5px;
 }
 .champs__head {
-  margin: calc(6% + 78px) 5% 12px;
+  margin: calc(6% + 104px) 5% 12px; /* extra gap below the title switcher */
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -680,7 +680,7 @@ body {
 }
 .champs__tech em { font-style: normal; color: #cdd9e6; }
 .champs__stat {
-  margin-top: 9px;
+  margin-top: 18px; /* breathe between the technical note and the headline stat */
   font-size: 14px;
   color: var(--muted);
   white-space: nowrap; /* keep it on one line */
@@ -720,7 +720,7 @@ body {
   display: flex;
   align-items: stretch;
   gap: 10px;
-  min-height: 34px;
+  min-height: 44px; /* room for the sub-community name + the @handle */
 }
 .champrow__topic {
   flex: 0 0 150px;
@@ -746,7 +746,10 @@ body {
   flex-basis: 0;
   min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column; /* sub-community name over the @handle */
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1px;
   padding: 4px 8px;
   border: 1px solid transparent;
   border-left-width: 3px;
@@ -759,7 +762,24 @@ body {
   transition: background 0.15s ease;
 }
 .champcell:hover { background: rgba(255, 255, 255, 0.1); }
-.champcell__h { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.champcell__sub {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  color: #e6edf3;
+}
+.champcell__h {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+/* the rare unnamed sub: handle is the only line -> make it the bright primary */
+.champcell__h:only-child { color: var(--text); font-weight: 600; }
 .champcell--upper { border-left-color: #e8b84b; }
 .champcell--middle { border-left-color: #1d9bf0; background: rgba(29, 155, 240, 0.12); }
 .champcell--lower { border-left-color: #34d399; }
@@ -777,6 +797,7 @@ body {
   font-size: 12px;
 }
 .champs__tip-h { font-weight: 700; color: var(--text); }
+.champs__tip-sub { margin-top: 1px; color: #cdd9e6; }
 .champs__tip-r { margin-top: 2px; color: var(--muted); }
 .champs__tip-r b { color: var(--text); }
 

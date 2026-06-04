@@ -95,6 +95,27 @@ def klass(f):
 legend = json.loads((ROOT / "topic_legend.json").read_text(encoding="utf-8"))
 topic_meta = {t["id"]: t for t in legend}
 
+# --- finer-grained tier-2 sub-community names (e.g. "Atproto Tinkerers"). Matched
+#     exactly the way the map's tier-1 legend is: greedy overlap of each cluster's
+#     top-liked authors with the saved names_reference signatures, so the labels
+#     stay in sync with the map. cluster_context_t2 ids == the `sub` ids here. ---
+ref2 = json.loads((ROOT / "names_reference.json").read_text(encoding="utf-8"))["tier2"]
+ctx2 = {x["id"]: x for x in json.loads((ROOT / "cluster_context_t2.json").read_text(encoding="utf-8"))}
+_sig = {r["name"]: set(r["top_likes"]) for r in ref2}
+_pairs = []
+for _cid, _c in ctx2.items():
+    _L = set(b["handle"] for b in _c["likes"][:14])
+    for _nm, _tl in _sig.items():
+        _pairs.append((len(_L & _tl), _cid, _nm))
+_pairs.sort(reverse=True)
+_usedc, _usedn, sub_name = set(), set(), {}
+for _ov, _cid, _nm in _pairs:
+    if _cid in _usedc or _nm in _usedn:
+        continue
+    sub_name[_cid] = _nm
+    _usedc.add(_cid)
+    _usedn.add(_nm)
+
 topics: dict = {}
 counts = {"upper": 0, "middle": 0, "lower": 0}
 for r in champ.sort("lift", descending=True).to_dicts():
@@ -112,6 +133,7 @@ for r in champ.sort("lift", descending=True).to_dicts():
     )
     t["champions"].append({
         "handle": r["handle"],
+        "subName": sub_name.get(int(r["sub"]), ""),
         "subSize": int(r["sub_size"]),
         "supporters": int(r["supporters"]),
         "lift": round(float(r["lift"]), 1),
@@ -129,6 +151,10 @@ for t in topics.values():
             e["subSize"] += c["subSize"]
             e["supporters"] += c["supporters"]
             e["lift"] = max(e["lift"], c["lift"])
+            parts = [p for p in e["subName"].split(" + ") if p]
+            if c["subName"] and c["subName"] not in parts:
+                parts.append(c["subName"])
+            e["subName"] = " + ".join(parts)
         else:
             by_h[c["handle"]] = c
             deduped.append(c)
