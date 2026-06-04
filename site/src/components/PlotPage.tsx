@@ -91,6 +91,22 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
     plot.searchable &&
     ((points !== null && !selectedPoint) || (hist !== null && !selectedDensity));
 
+  // Leaderboard rank readout (was a hover overlay on the lists; now shown below
+  // the search bar so it's legible and out of the way of the graph).
+  const sel = selectedHandle?.toLowerCase() ?? null;
+  const lbNote =
+    plot.highlight === "list-row" && leaderboard && sel
+      ? leaderboard.mostObscure.some((r) => r.handle === sel) ||
+        leaderboard.mostMainstream.some((r) => r.handle === sel)
+        ? null
+        : (() => {
+            const ranked = leaderboard.rankOf(sel);
+            return ranked
+              ? `@${sel} ranks #${ranked.rank.toLocaleString()} of ${leaderboard.total.toLocaleString()} by mainstreaminess (1 = most viral)`
+              : `@${sel} isn’t a ranked user (needs ≥50 likes)`;
+          })()
+      : null;
+
   return (
     <main className="plotpage">
       <header className="plotpage__header">
@@ -119,6 +135,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
                 @{selectedHandle} isn’t on this plot
               </div>
             )}
+            {lbNote && <div className="plotpage__nothere">{lbNote}</div>}
           </div>
         )}
 

@@ -213,36 +213,39 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user" }:
       }),
       // Soft glow: large, faint dots under the crisp points. Overlap in dense
       // clusters accumulates -> the cluster shapes softly bloom (structure-led).
-      // The base disc is the crisp boundary; extra wider/fainter haloes feather
-      // it as you zoom out (glowSpread), softening the hard edge on the overview.
-      ...[
-        { id: "glow-h2", rMul: 1 + 1.6 * glowSpread, op: 0.028 * glowSpread },
-        { id: "glow-h1", rMul: 1 + 0.7 * glowSpread, op: 0.05 * glowSpread },
-        { id: "glow", rMul: 1, op: 0.06 },
-      ]
-        .filter((g) => g.op > 0)
-        .map(
-          (g) =>
-            new ScatterplotLayer({
-              id: g.id,
-              data: {
-                length: numVisible,
-                attributes: {
-                  getPosition: { value: data.points, size: 2 },
-                  getFillColor: { value: activeColors, size: 3 },
-                },
+      // Feather the hard outer edge INWARD as you zoom out, keeping the max glow
+      // radius AND center brightness fixed: concentric discs that shrink inward
+      // (glowSpread) so the outer annulus thins out -- removing glow from the
+      // outside, not ballooning it. Clean single disc at >=63% zoom; soft by ~18%.
+      ...(glowSpread <= 0.01
+        ? [{ id: "glow", rMul: 1, op: 0.06 }]
+        : [0, 0.18, 0.36, 0.54].map((k, idx) => ({
+            id: idx === 0 ? "glow" : `glow-i${idx}`,
+            rMul: 1 - k * glowSpread, // outer disc stays at R; the rest pull in
+            op: 0.06 / 4, // 4 stacked -> ~same center alpha as the single 0.06 disc
+          }))
+      ).map(
+        (g) =>
+          new ScatterplotLayer({
+            id: g.id,
+            data: {
+              length: numVisible,
+              attributes: {
+                getPosition: { value: data.points, size: 2 },
+                getFillColor: { value: activeColors, size: 3 },
               },
-              getRadius: clamp(pointRadius * 3.5, 2.2, 16) * g.rMul,
-              radiusUnits: "pixels",
-              radiusMinPixels: 2.2 * g.rMul,
-              opacity: g.op,
-              pickable: false,
-              updateTriggers: {
-                getRadius: [pointRadius, glowSpread],
-                getFillColor: [colorMode],
-              },
-            })
-        ),
+            },
+            getRadius: clamp(pointRadius * 3.5, 2.2, 16) * g.rMul,
+            radiusUnits: "pixels",
+            radiusMinPixels: 2.2 * g.rMul,
+            opacity: g.op,
+            pickable: false,
+            updateTriggers: {
+              getRadius: [pointRadius, glowSpread],
+              getFillColor: [colorMode],
+            },
+          })
+      ),
       new ScatterplotLayer({
         id: "points",
         data: {

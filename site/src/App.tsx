@@ -8,10 +8,10 @@ import { ExploreMap } from "./components/ExploreMap.tsx";
 // climb back from the plots to the map. White hairlines, no fill/box.
 function ChevronStack() {
   return (
-    <svg className="mapchev__svg" viewBox="0 0 140 18" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points="16,8 70,3 124,8" />
-      <polyline points="16,12 70,7 124,12" />
-      <polyline points="16,16 70,11 124,16" />
+    <svg className="mapchev__svg" viewBox="0 0 140 22" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="16,8 70,2.8 124,8" />
+      <polyline points="16,14 70,8.8 124,14" />
+      <polyline points="16,20 70,14.8 124,20" />
     </svg>
   );
 }

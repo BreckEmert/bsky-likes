@@ -24,6 +24,12 @@ export function SearchBox({ index, selected, onSelect }: Props) {
 
   useEffect(() => setActive(0), [query]);
 
+  // Reflect an externally-set selection (from another plot or the map) in the
+  // box, so a searched handle is always visible instead of an empty prompt.
+  useEffect(() => {
+    setQuery(selected ?? "");
+  }, [selected]);
+
   // Close the dropdown on outside click.
   useEffect(() => {
     function onDocClick(e: MouseEvent) {

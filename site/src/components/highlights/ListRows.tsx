@@ -12,12 +12,9 @@ interface Props {
 export function ListRows({ data, selectedHandle }: Props) {
   if (!data) return <div className="listrows__loading">loading…</div>;
   const sel = selectedHandle ? selectedHandle.toLowerCase() : null;
-  const inLists =
-    !!sel &&
-    (data.mostObscure.some((r) => r.handle === sel) ||
-      data.mostMainstream.some((r) => r.handle === sel));
-  const ranked = sel && !inLists ? data.rankOf(sel) : null;
 
+  // The "rank #N of M" readout now lives in PlotPage (below the search bar), so
+  // it stays legible and off the lists.
   return (
     <div className="listrows">
       <Column
@@ -32,13 +29,6 @@ export function ListRows({ data, selectedHandle }: Props) {
         rows={data.mostMainstream}
         selected={sel}
       />
-      {sel && !inLists && (
-        <div className="listrows__note">
-          {ranked
-            ? `@${sel} ranks #${ranked.rank.toLocaleString()} of ${data.total.toLocaleString()} by mainstreaminess (1 = most viral)`
-            : `@${sel} isn’t a ranked user (needs ≥50 likes)`}
-        </div>
-      )}
     </div>
   );
 }
@@ -88,7 +78,10 @@ function Column({
               <span
                 className="listrow__bar"
                 style={{
-                  width: `${frac(r.value) * 100}%`,
+                  // Span between the handle's left (36px) and an 8px right
+                  // margin so the bar never overflows the row (which used to
+                  // trigger a horizontal scrollbar on the column).
+                  width: `calc((100% - 44px) * ${frac(r.value)})`,
                   background: accent,
                 }}
               />

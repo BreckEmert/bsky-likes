@@ -80,7 +80,7 @@ body {
 .app--plots .mapchev:hover { opacity: 0.65; }
 .mapchev__svg {
   width: min(360px, 40vw);          /* narrower -> reads closer to the middle */
-  height: 20px;                     /* short box -> the lines sit tight together */
+  height: 24px;                     /* short box -> the lines sit tight together */
   display: block;
 }
 .mapchev__svg polyline {
@@ -339,6 +339,7 @@ body {
   margin: 0;
   padding: 0;
   overflow-y: auto;
+  overflow-x: hidden;   /* never scroll sideways (bar/handle clipping is fine) */
   counter-reset: rank;
   min-height: 0;
 }
