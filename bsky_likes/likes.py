@@ -260,7 +260,18 @@ async def run_initial(client, user_dids, state, state_path, cutoff,
                       f"rate: {rate:.1f} users/s  "
                       f"eta: {eta_sec/3600:.1f}h")
 
-            if len(buffer) >= 50_000 or processed % config.CHECKPOINT_EVERY == 0:
+            # Flush shards often (cheap), but SAVE STATE rarely. save_state
+            # re-serializes the whole (growing) done_users set, which blocks the
+            # event loop -- doing it on every shard flush is what drags the rate
+            # down as the set grows. Decouple: shards on the buffer, state on
+            # CHECKPOINT_EVERY users only. (Cost: a crash re-pulls up to
+            # CHECKPOINT_EVERY users -> a few dedupable dup likes. Fine for a sweep.)
+            if len(buffer) >= 50_000:
+                flush_likes(buffer, shard_idx, out_dir)
+                shard_idx += 1
+                state["shard_idx"] = shard_idx
+                buffer = []
+            if processed % config.CHECKPOINT_EVERY == 0:
                 if buffer:
                     flush_likes(buffer, shard_idx, out_dir)
                     shard_idx += 1
