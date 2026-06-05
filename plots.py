@@ -672,29 +672,88 @@ HIGHLIGHT_HANDLES = {
 BAKE_HIGHLIGHTS = False
 _HL = HIGHLIGHT_HANDLES if BAKE_HIGHLIGHTS else set()
 
-# WEB "punching" plot (Likes vs Followers). Now a HEXBIN density of *every*
-# liked account (n_posts >= 5) down to ~100 followers / 1 like-per-post -- the
-# old top-4,000 scatter was a high-follower blob; a hexbin keeps point density
-# legible across the whole range. The site's "highlight 15 you follow" feature
-# draws individual dots on top of this, so we also export positions for the FULL
-# author set (see ew.export_punching(author_df_full) in the export flow).
-author_df = author_df_full  # full set, not just the top 4,000
+top4000 = author_df_full.nlargest(4000, "total_likes")
+
+# Make sure all highlighted users are in the plotted set, even if outside top 4000
+highlighted = author_df_full[author_df_full["handle"].isin(_HL)]
+missing = highlighted[~highlighted["handle"].isin(top4000["handle"].values)]
+if len(missing) > 0:
+    top4000 = pd.concat([top4000, missing], ignore_index=True)
+author_df = top4000
 
 fig, ax = plt.subplots(figsize=(12, 7.5))
-hb = ax.hexbin(
-    author_df["followers_count"] + 1,
-    author_df["likes_per_post"] + 1,
-    xscale="log", yscale="log",
-    gridsize=72, cmap="plasma", mincnt=1, bins="log", linewidths=0.2,
-)
-ax.set_xlim(1e2, 10 ** 6.5)
-ax.set_ylim(1, None)
+ax.scatter(author_df["followers_count"] + 1,
+           author_df["likes_per_post"] + 1,
+           s=8, c=author_df["engagement_ratio"], cmap="plasma",
+           alpha=0.55, edgecolors="none",
+           norm=LogNorm(vmin=author_df["engagement_ratio"].quantile(0.05)+1e-6,
+                        vmax=author_df["engagement_ratio"].quantile(0.95)))
+ax.set_xscale("log"); ax.set_yscale("log")
 
-cb = fig.colorbar(hb, ax=ax, label="accounts per hex (log)")
+# Highlight: gold outline rings for all selected users (off by default now)
+highlight_rows = author_df[author_df["handle"].isin(_HL)]
+found_handles = set(highlight_rows["handle"].values)
+missing_handles = _HL - found_handles
+if missing_handles:
+    print(f"WARNING: not found in author_df_full ({len(missing_handles)}):")
+    for h in sorted(missing_handles):
+        print(f"  {h}")
+
+hx = highlight_rows["followers_count"].values + 1
+hy = highlight_rows["likes_per_post"].values + 1
+ax.scatter(hx, hy,
+           s=70,
+           c=highlight_rows["engagement_ratio"].values,
+           cmap="plasma",
+           norm=LogNorm(vmin=author_df["engagement_ratio"].quantile(0.05)+1e-6,
+                        vmax=author_df["engagement_ratio"].quantile(0.95)),
+           alpha=1.0,
+           edgecolors=BSKY_GOLD,
+           linewidths=1.,
+           zorder=100)
+
+# Labels for highlighted users with manual offset overrides
+manual_offsets = {
+    "standupmaths.bsky.social": (6, 8),
+    "gracekind.net":              (0, 12),
+    "jefferyharrell.bsky.social": (-46, 20),
+    "aly.codes": (-28, 36),
+    "jdp.extropian.net": (3, -4),
+}
+DEFAULT_OFFSET = (6, 4)
+
+for _, r in highlight_rows.iterrows():
+    handle = r["handle"]
+    offset = manual_offsets.get(handle, DEFAULT_OFFSET)
+    has_arrow = handle in manual_offsets
+    ax.annotate(
+        f"@{handle}",
+        (r["followers_count"] + 1, r["likes_per_post"] + 1),
+        fontsize=8,
+        color=BSKY_GOLD,
+        alpha=0.9,
+        xytext=offset,
+        textcoords="offset points",
+        zorder=12,
+        arrowprops=(dict(arrowstyle="-", color=BSKY_GOLD, alpha=0.4, lw=0.5)
+                    if has_arrow else None),
+    )
+
+ax.set_xlim(1e2, 10**6.5)   # followers from 10^2
+ax.set_ylim(1, None)        # avg likes/post from 10^0
+
+cb = fig.colorbar(ax.collections[0], ax=ax, label="engagement ratio (log)")
 cb.outline.set_visible(False)
 ax.set_xlabel("Follower count")
 ax.set_ylabel("Avg likes per post")
-ax.set_title("Likes vs followers — every liked account", fontsize=18)
+_extra = f" (+ {len(found_handles)} highlighted)" if found_handles else ""
+ax.set_title(f"Top 4,000 liked accounts{_extra}", fontsize=18)
+ax.text(0.02, 0.98,
+        '"Anyone can cook." - Ratatouille',
+        transform=ax.transAxes,
+        ha="left", va="top",
+        fontsize=10, color="#9aa4b1", alpha=0.9,
+        bbox=dict(facecolor="#0e1116", edgecolor="none", alpha=0.7, pad=4))
 
 plt.savefig(PLOTS_DIR / "09_5_highlights.png")
 if WEB_EXPORT:
@@ -838,10 +897,7 @@ if WEB_EXPORT:
     ew.export_activity(per_liker)
     ew.export_typical_popularity(per_liker)
     ew.export_leaderboards(per_liker, n=50)
-    # Full author set so the "highlight 15 you follow" feature reaches well past
-    # the old top-4,000 (positions ~3.5 MB / handles ~5 MB). Cap with
-    # .nlargest(N, "total_likes") if you want a smaller punching.*.bin.
-    ew.export_punching(author_df_full)         # Plot 9.5 plotted set (pandas)
+    ew.export_punching(author_df)              # Plot 9.5 plotted set (pandas)
     ew.export_like_repost(author_eng, users_df)
     print(f"Web lookups written -> {ew.SITE_PLOTS}")
     # Deferred (design needed): popularity-curve histograms, half-life.

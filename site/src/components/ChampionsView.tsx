@@ -251,14 +251,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                         onMouseLeave={() => setHover(null)}
                         onClick={() => onSelectHandle(c.handle)}
                       >
-                        <span className="champcell__top">
-                          {data.avatars?.[c.handle] ? (
-                            <img className="champcell__pfp" src={data.avatars[c.handle]} alt="" loading="lazy" />
-                          ) : (
-                            <span className="champcell__pfp champcell__pfp--blank" aria-hidden="true" />
-                          )}
-                          {c.subName && <span className="champcell__sub">{c.subName}</span>}
-                        </span>
+                        {c.subName && <span className="champcell__sub">{c.subName}</span>}
                         <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
                       </button>
                     ))}
