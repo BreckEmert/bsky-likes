@@ -320,10 +320,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
               length: numVisible,
               attributes: {
                 getPosition: { value: data.points, size: 2 },
-                // glow uses the POSITIONAL palette (never per-point topic color),
-                // so a stray off-topic account can't bleed its hue into a
-                // neighbouring cluster's bloom. Crisp dots below keep topic color.
-                getFillColor: { value: data.colors, size: 3 },
+                getFillColor: { value: activeColors, size: 3 },
               },
             },
             getRadius: clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * g.rMul,
