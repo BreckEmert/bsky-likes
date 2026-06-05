@@ -283,9 +283,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     0,
     1
   );
-  // Shrink the glow as you zoom in: full radius on the overview, 80% by ~70% zoom
-  // (and held there), so the bloom tightens and the dots read more individually.
-  const glowRadiusScale = 1 - 0.2 * Math.min(1, zoomPct / 70);
+  // ONE circle drives both layers: `circle` is the glow/bloom radius, and the crisp
+  // dot is a FRACTION of it (`dotPct`) that grows with zoom. So at low zoom the dot
+  // is a small core inside a big topic bloom; as you zoom in the dot grows to fill
+  // the circle and the glow recedes to a thin halo -> the point gets "specific".
+  const circle = clamp(pointRadius * 3.5, 2.2 * mobileScale, 16);
+  const dotPct = clamp(0.2 + zoomPct / 120, 0.2, 0.85);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -333,13 +336,13 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
                 getFillColor: { value: glowColors, size: 3 },
               },
             },
-            getRadius: clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * g.rMul * glowRadiusScale,
+            getRadius: circle * g.rMul,
             radiusUnits: "pixels",
-            radiusMinPixels: 2.2 * mobileScale * g.rMul * glowRadiusScale,
+            radiusMinPixels: 2.2 * mobileScale * g.rMul,
             opacity: g.op,
             pickable: false,
             updateTriggers: {
-              getRadius: [pointRadius, glowSpread, glowRadiusScale],
+              getRadius: [circle, glowSpread],
               getFillColor: [colorMode],
             },
           })
@@ -353,16 +356,16 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
             getFillColor: { value: activeColors, size: 3 },
           },
         },
-        // dots 90% wider (diameter x1.9) than the glow's base radius, so community
-        // colors stay visible inside a topic's (dominant-colored) bloom.
-        getRadius: pointRadius * 1.9,
+        // the crisp dot is a fraction of the same circle (grows with zoom), so
+        // community colors stay visible inside the topic's dominant-colored bloom.
+        getRadius: circle * dotPct,
         radiusUnits: "pixels",
-        radiusMinPixels: 0.4 * 1.9 * mobileScale,
+        radiusMinPixels: 0.5 * mobileScale,
         opacity: 0.85,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 220],
-        updateTriggers: { getRadius: [pointRadius], getFillColor: [colorMode] },
+        updateTriggers: { getRadius: [circle, dotPct], getFillColor: [colorMode] },
       }),
     ];
     const sel = selectedHandle?.toLowerCase();
@@ -467,7 +470,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, glowRadiusScale, isMobile]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, circle, dotPct, isMobile]);
 
   return (
     <div className="exploremap" ref={ref}>
