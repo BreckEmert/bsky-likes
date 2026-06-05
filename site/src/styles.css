@@ -1121,8 +1121,9 @@ body {
   .champs__note--mobile { display: inline; }
   /* legend on ONE line on phones */
   .champs__legend { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
-  /* squish + tie both title columns, pushing the table further left on phones */
-  .champs { --champs-title-w: 92px; }
+  /* widen the cells (~25%) and squeeze the title column so the table starts ~20%
+     closer to the screen's left edge (gutter stays, so the head text doesn't move) */
+  .champs { --champs-title-w: 69px; --champs-mobile-cellw: 700px; }
   /* Every row scrolls horizontally with the SAME width (cells share one fixed
      width, sized proportionally within it, like desktop); the topic title sticks
      to the left so it's always visible. */
