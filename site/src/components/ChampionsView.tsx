@@ -118,8 +118,8 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
           <div className="champs__title">Who does each community rally around?</div>
           <div className="champs__stat">
             <span className="champs__midchip">{nonFamousPct}% non-famous</span> under
-            this lens: that share of communities are led by an account with under 50k
-            followers.
+            this lens (share of communities that are led by an account with under 50k
+            followers).
           </div>
           <div className="champs__controls">
             <div className="champs__toggle" role="tablist" aria-label="Ranking lens">
