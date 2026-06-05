@@ -24,11 +24,18 @@ upper / middle / lower "class".
 Run:  python export_champions.py
 """
 import json
+import os
 import time
 from pathlib import Path
 
 import polars as pl
 from bsky_likes import config
+
+# After the uncapped sweep finishes, run `USE_SWEEP=1 python export_champions.py`
+# to rebuild the champions from the clean (uncapped) likes_v2 shards instead of the
+# capped likes/ dir. The global plots stay on the capped likes/ -- only the
+# community-specific champions board needs the unbiased pull.
+LIKES_SOURCE = config.SWEEP_LIKES_DIR if os.environ.get("USE_SWEEP") else config.LIKES_DIR
 
 FAN_MIN_LIKES = 15        # a "superfan" must have liked >= this many of an account's posts
 SUPERFAN_FLOOR = 10       # loyalty/devotion: need >= this many superfans here to qualify
@@ -53,9 +60,13 @@ METRICS = [
     {"id": "distinct", "label": "Distinctiveness", "rank": "lift",
      "blurb": "Accounts this community likes at a far higher rate than the rest of "
               "Bluesky does (highest lift)."},
-    {"id": "likerate", "label": "Like-rate", "rank": "likeRate",
-     "blurb": "Accounts with the highest average likes per post from this community "
-              "(must have more posts than the median account)."},
+    # Like-rate DROPPED: likes/post divides by a sampled post count, so rare-but-
+    # viral posters (e.g. @markhamillofficial -> 15 communities) sweep it. The
+    # metric is unfixable with this data; the likeRate column is still computed
+    # below if we ever want to revisit it. Re-add this entry to bring the lens back.
+    # {"id": "likerate", "label": "Like-rate", "rank": "likeRate",
+    #  "blurb": "Accounts with the highest average likes per post from this community "
+    #           "(must have more posts than the median account)."},
 ]
 
 t0 = time.time()
@@ -73,7 +84,8 @@ sub_topic = (
 print(f"{N:,} clustered users, {sub_sizes.height} sub-communities ({time.time()-t0:.0f}s)", flush=True)
 
 cmap = mem.select(["liker_did", "sub"])
-likes = pl.scan_parquet(str(config.LIKES_DIR / "part-*.parquet")).select(["liker_did", "post_uri"])
+likes = pl.scan_parquet(str(LIKES_SOURCE / "part-*.parquet")).select(["liker_did", "post_uri"])
+print(f"likes source: {LIKES_SOURCE.name}", flush=True)
 posts = pl.scan_parquet(str(config.POSTS_PATH)).select(["post_uri", "post_author_did"])
 base = likes.join(cmap.lazy(), on="liker_did", how="inner").join(posts, on="post_uri", how="inner")
 
