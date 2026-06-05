@@ -46,16 +46,16 @@ SITE_PLOTS.mkdir(parents=True, exist_ok=True)
 MOBILE_FIG = (6.5, 7.0)
 
 
-def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200):
+def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200, cbar=None):
     """Save a transparent PNG + bounds.json (axes' pixel rect) for the site.
 
     Emits TWO variants from the SAME drawn figure:
       {id}.png / {id}.bounds.json          -- desktop, at the cell's figsize
-      {id}.mobile.png / {id}.mobile.bounds.json -- re-rendered at MOBILE_FIG
-    The site picks one per viewport via <picture>, so a phone never downloads the
-    desktop image (and vice-versa). The PNG MUST be the full, uncropped figure so
-    its pixel size equals imgWidth/imgHeight; rcParams sets savefig.bbox='tight',
-    which would crop it, so we force the full figure via rc_context at save time.
+      {id}.mobile.png / {id}.mobile.bounds.json -- squarer portrait, with any side
+          legend/colorbar moved BELOW the plot to free horizontal width on phones.
+    Pass `cbar` (the fig.colorbar return) so it can be re-laid-out horizontally for
+    mobile; ax legends are moved below automatically. The site loads only the
+    matching variant per viewport, so a phone never downloads the desktop image.
     """
     import matplotlib as mpl
     # Suppress title + subtitle (rendered as HTML on the site). In-plot quotes are
@@ -90,8 +90,29 @@ def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200):
 
     orig = fig.get_size_inches().copy()
     desktop = _save("")                # desktop, at the cell's figsize
+
+    # --- MOBILE variant: move side legend/colorbar BELOW the plot, then go portrait
+    leg = ax.get_legend()
+    if leg is not None:
+        handles, labels = ax.get_legend_handles_labels()
+        if handles:
+            ax.legend(handles, labels, loc="upper center",
+                      bbox_to_anchor=(0.5, -0.12), ncol=min(len(handles), 3),
+                      facecolor="#1f2933", edgecolor="none", fontsize=8)
+    if cbar is not None:
+        try:
+            mappable = cbar.mappable
+            label = cbar.ax.get_ylabel() or cbar.ax.get_xlabel()
+            cbar.remove()
+            ncb = fig.colorbar(mappable, ax=ax, orientation="horizontal",
+                               pad=0.13, fraction=0.06, aspect=40)
+            if label:
+                ncb.set_label(label)
+            ncb.outline.set_visible(False)
+        except Exception as e:
+            print(f"  (mobile colorbar relayout skipped for {plot_id}: {e})")
     fig.set_size_inches(*MOBILE_FIG)
-    _save(".mobile")                   # mobile, squarish portrait
+    _save(".mobile")                   # mobile: portrait, legend/colorbar below
     fig.set_size_inches(*orig)         # restore so the cell's plt.show() is unaffected
     return desktop
 

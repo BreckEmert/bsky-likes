@@ -277,7 +277,7 @@ ax.set_title("Higher y = a few things you've liked blew up\n"
 ax.legend(facecolor="#1f2933", edgecolor="none", loc="upper left")
 plt.savefig(PLOTS_DIR / "02_hipster_index.png")
 if WEB_EXPORT:
-    ew.export_png_and_bounds(fig, ax, "typical-popularity", x_log=True, y_log=True)
+    ew.export_png_and_bounds(fig, ax, "typical-popularity", x_log=True, y_log=True, cbar=cb)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
@@ -424,7 +424,7 @@ ax.text(0.03, 0.97,
         **{**QUOTE_STYLE, "fontsize": 9})
 plt.savefig(PLOTS_DIR / "05b_like_repost_authors.png")
 if WEB_EXPORT:
-    ew.export_png_and_bounds(fig, ax, "like-repost", x_log=True, y_log=True)
+    ew.export_png_and_bounds(fig, ax, "like-repost", x_log=True, y_log=True, cbar=cb)
 plt.show()
 plt.close('all')
 
@@ -590,7 +590,7 @@ ax.set_title("Bluesky users are so kind <3\n"
              "the more popular we are\nthe less popular the content we like",
              fontsize=12)
 if WEB_EXPORT:
-    ew.export_png_and_bounds(fig, ax, "activity", x_log=True, y_log=True)
+    ew.export_png_and_bounds(fig, ax, "activity", x_log=True, y_log=True, cbar=cb)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
@@ -715,7 +715,7 @@ ax.set_title("Likes vs followers — every liked account", fontsize=18)
 
 plt.savefig(PLOTS_DIR / "09_5_highlights.png")
 if WEB_EXPORT:
-    ew.export_png_and_bounds(fig, ax, "punching", x_log=True, y_log=True)
+    ew.export_png_and_bounds(fig, ax, "punching", x_log=True, y_log=True, cbar=cb)
 plt.show()
 plt.close('all')
 
@@ -761,17 +761,19 @@ times = (joined_lazy
 n_heat = int(times["n"].sum())
 print(f"  per-user whole-week trim: {n_heat:,} likes")
 
-mat = np.zeros((7, 8))   # 3-hour blocks: 24h / 3 = 8 columns
+mat = np.zeros((7, 24))   # hourly bins (desktop ticks every 2h, as before)
 for row in times.iter_rows(named=True):
-    mat[row["dow"]-1, row["hour"] // 3] += row["n"]
+    mat[row["dow"]-1, row["hour"]] = row["n"]
 
 fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
-im = ax.imshow(mat, aspect="auto", cmap="magma", interpolation="nearest")
-ax.set_yticks(range(7))
+# extent => x is real hours 0..24, so the 2-hour ticks sit on cell EDGES (00:00 on
+# the left outline) instead of centered inside the first cell. y: 0(top)=Mon..7=Sun.
+im = ax.imshow(mat, extent=[0, 24, 7, 0], aspect="auto", cmap="magma", interpolation="nearest")
+ax.set_yticks([i + 0.5 for i in range(7)])
 ax.set_yticklabels(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
-ax.set_xticks(range(8))
-ax.set_xticklabels([f"{h:02d}:00" for h in range(0, 24, 3)])
-ax.set_xlabel("Hour of day (UTC, 3-hour blocks)")
+ax.set_xticks(range(0, 24, 2))
+ax.set_xticklabels([f"{h:02d}:00" for h in range(0, 24, 2)])
+ax.set_xlabel("Hour of day (UTC)")
 ax.set_title("When Bluesky Wakes Up", loc="left", fontsize=16)
 # Quote OUTSIDE the axes, in the top margin to the right of the title.
 # Shrink the axes' top so the heatmap shifts down and leaves room.
@@ -783,7 +785,7 @@ cb = fig.colorbar(im, ax=ax, label="likes")
 cb.outline.set_visible(False)
 plt.savefig(PLOTS_DIR / "10_heatmap.png")
 if WEB_EXPORT:
-    ew.export_png_and_bounds(fig, ax, "wakes-up", x_log=False, y_log=False)
+    ew.export_png_and_bounds(fig, ax, "wakes-up", x_log=False, y_log=False, cbar=cb)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 
