@@ -64,7 +64,7 @@ rows, cols = np.mgrid[0:GRID, 0:GRID]
 tx_img = cols / (GRID - 1)
 ty_img = 1.0 - rows / (GRID - 1)          # row 0 -> ty 1 -> yMax (top)
 rgb_img = continuum(tx_img, ty_img)
-alpha = (np.flipud(Dn.T) ** 1.1)          # Dn is [x,y] -> .T [y,x] -> flip so row0=yMax
+alpha = (np.flipud(Dn.T) ** 1.5)          # Dn is [x,y] -> .T [y,x] -> flip so row0=yMax
 # exponent >1 DIMS low densities so sparse/isolated points stop punching colored
 # speckles into the smooth field (was 0.5, which brightened them); higher = cleaner
 rgba = np.dstack([rgb_img, alpha * 255.0]).clip(0, 255).astype(np.uint8)

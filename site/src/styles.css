@@ -653,6 +653,10 @@ body {
 /* ---- Champions view (the "who owns each tribe" tree) ---- */
 .champs {
   --champs-maxw: 1500px; /* cap the board width on ultrawide screens */
+  /* ONE width for BOTH the by-topic and by-community title columns, so the two
+     views' tables start at the exact same x and the label column is easy to
+     retune. Squished from 210/150 so the table sits ~66% closer to the left. */
+  --champs-title-w: 110px;
   position: relative;
   width: 100%;
   height: 100%;
@@ -810,7 +814,7 @@ body {
   border-radius: 6px;
 }
 .champrow__topic {
-  flex: 0 0 150px;
+  flex: 0 0 var(--champs-title-w);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -823,9 +827,9 @@ body {
 }
 /* per-community view: the title is the star -> wider, stacks name + size */
 .champrow__topic--wide {
-  flex-basis: 210px;
+  flex-basis: var(--champs-title-w);
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-end; /* right-aligned to the table -- cleaner */
   justify-content: center;
   gap: 1px;
 }
@@ -1115,13 +1119,17 @@ body {
   .champs__paren { display: none; }          /* drop "(famous)" etc. on phones */
   .champs__note--full { display: none; }
   .champs__note--mobile { display: inline; }
+  /* legend on ONE line on phones */
+  .champs__legend { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+  /* squish + tie both title columns, pushing the table further left on phones */
+  .champs { --champs-title-w: 92px; }
   /* Every row scrolls horizontally with the SAME width (cells share one fixed
      width, sized proportionally within it, like desktop); the topic title sticks
      to the left so it's always visible. */
   .champs__tree { overflow-x: auto; }
   .champrow { width: max-content; }
   .champrow__topic {
-    flex: 0 0 100px;
+    flex: 0 0 var(--champs-title-w);
     font-size: 11px;
     position: sticky;
     left: 0;
@@ -1132,22 +1140,18 @@ body {
   }
   .champrow__cells { flex: 0 0 var(--champs-mobile-cellw, 560px); gap: 4px; }
   .champcell { font-size: 12px; padding: 5px 8px; }
-  /* per-community view: same horizontal-scroll behavior as by-topic, but the
-     sticky title column is a touch wider since the community name leads.
-     Force left-align (incl. the inherited text-align) so 1- and 2-line names
-     line up the same, and drop the "x users" line -- no room on mobile. */
+  /* per-community view: same sticky/scroll behavior + tied width as by-topic,
+     right-aligned to the table to match the topic titles. Drop the "x users"
+     line -- no room on mobile. */
   .champs__tree--flat .champrow__topic--wide {
-    flex: 0 0 116px;
-    align-items: flex-start;
-    text-align: left;
+    flex-basis: var(--champs-title-w);
   }
   .champs__tree--flat .champrow__size { display: none; }
 
-  /* Plots: use the width better on phones -- trim the side padding so the image
-     spans nearly the full screen (it was boxed in by the desktop 20px gutters),
-     and don't reserve as much header height. */
-  .plotpage { padding: 10px 6px 14px; }
-  .plotpage__header { min-height: 0; }
+  /* Plots on phones: keep the TEXT (title/desc) at its normal gutter, but let the
+     plot image bleed toward the screen edges -- the stage breaks out of the side
+     padding a touch (there's room). */
+  .plotpage__stage { margin-left: -14px; margin-right: -14px; }
 
   /* No hover on touch: keep the climb-up chevron permanently visible on plots. */
   .app--plots .mapchev { opacity: 0.5; pointer-events: auto; }

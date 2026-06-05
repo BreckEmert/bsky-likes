@@ -253,7 +253,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   // Tiny crisp dots at the overview (the density background carries the color
   // there); grow gently as you zoom in for hover/click. Halve them on phones --
   // the same pixel radius reads far too thick/bright on a small screen.
-  const mobileScale = size.width > 0 && size.width < 640 ? 0.5 : 1;
+  const isMobile = size.width > 0 && size.width < 640;
+  const mobileScale = isMobile ? 0.5 : 1;
   const pointRadius = clamp(0.35 + 0.45 * zoomDelta, 0.35, 4.5) * mobileScale;
   const zoomPct = Math.round((zoomDelta / ZOOM_SPAN) * 100);
   // Density-color background: full until ~15% zoom, then linear out to nothing
@@ -303,7 +304,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       // radius AND center brightness fixed: concentric discs that shrink inward
       // (glowSpread) so the outer annulus thins out -- removing glow from the
       // outside, not ballooning it. Clean single disc at >=63% zoom; soft by ~18%.
-      ...(glowSpread <= 0.01
+      // dot glow OFF on phones (quick patch to compare looks); desktop keeps it.
+      ...(isMobile ? [] : (glowSpread <= 0.01
         ? [{ id: "glow", rMul: 1, op: 0.06 }]
         : [0, 0.22, 0.44, 0.66].map((k, idx) => ({
             id: idx === 0 ? "glow" : `glow-i${idx}`,
@@ -331,7 +333,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
               getFillColor: [colorMode],
             },
           })
-      ),
+      )),
       new ScatterplotLayer({
         id: "points",
         data: {
@@ -425,7 +427,6 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     };
     // On phones the labels read too large -- shrink tier-1 (topic) titles 25%
     // and tier-2 (community) titles 10%.
-    const isMobile = size.width > 0 && size.width < 640;
     labelTier(1, tier1Opacity, 13, isMobile ? 0.75 : 1); // broad: fades out by ~38%
     labelTier(2, tier2Opacity, 11, isMobile ? 0.9 : 1); // finer: fades in ~30-40%
 
@@ -454,7 +455,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, isMobile]);
 
   return (
     <div className="exploremap" ref={ref}>
