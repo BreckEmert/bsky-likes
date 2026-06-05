@@ -433,7 +433,13 @@ async def run_sweep_mode(args):
     else:
         since = config.SWEEP_SINCE
 
-    if args.targets == "known-likers":
+    if args.targets == "clustered":
+        # Only the users that landed in a community (cluster_members_sub). This is
+        # ALL the champions board uses -- the other ~220k likers aren't in any
+        # community, so their likes never enter a champion calc. ~half the work.
+        targets = (pl.read_parquet(config.PROJECT_DIR / "cluster_members_sub.parquet")
+                   .select("liker_did").unique()["liker_did"].to_list())
+    elif args.targets == "known-likers":
         # Users with >=1 captured like already: cheaper (skips the ~420k empty
         # set-B users) and near-complete, but misses anyone who started liking
         # since the original crawl.
@@ -445,11 +451,11 @@ async def run_sweep_mode(args):
     out_dir = config.SWEEP_LIKES_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    client = Client(concurrency=config.CONCURRENCY, user_agent="bsky-likes-sweep/0.1")
+    client = Client(concurrency=args.concurrency, user_agent="bsky-likes-sweep/0.1")
     state = load_state(config.SWEEP_STATE_PATH, defaults={"shard_idx": 0})
     try:
         print(f"Sweep: {len(targets):,} target users ({args.targets}), uncapped, "
-              f"back to {since.date()}  ->  {out_dir}")
+              f"concurrency={args.concurrency}, back to {since.date()}  ->  {out_dir}")
         rng = random.Random(42)
         rng.shuffle(targets)
 
@@ -499,9 +505,15 @@ def build_parser():
         help="Backward cutoff date YYYY-MM-DD (default: config.SWEEP_SINCE, "
              "i.e. 2026-01-01).")
     p_sweep.add_argument(
-        "--targets", choices=["all-b", "known-likers"], default="known-likers",
-        help="Which users to sweep. 'known-likers' (default) is cheaper and "
-             "near-complete; 'all-b' re-scans the full set B.")
+        "--targets", choices=["all-b", "known-likers", "clustered"], default="known-likers",
+        help="Which users to sweep. 'clustered' = only the ~221k users that landed "
+             "in a community (all the champions board needs, ~half the work); "
+             "'known-likers' = every user with >=1 captured like; 'all-b' = the "
+             "full set B (includes ~420k empty users — slow).")
+    p_sweep.add_argument(
+        "--concurrency", type=int, default=24,
+        help="Parallel request workers for the sweep (default 24; the client backs "
+             "off on 429). Higher = faster but more rate-limit pressure.")
 
     return p
 
