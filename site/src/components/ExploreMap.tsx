@@ -269,7 +269,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   // crisp when zoomed in but harsh on the overview. Feather it as you zoom out
   // by stacking wider, fainter concentric haloes. 0 (clean line) at >=63% zoom,
   // ramping to full feather by ~18%.
-  const GLOW_CLEAN_PCT = 63;
+  const GLOW_CLEAN_PCT = 75;
   const GLOW_SOFT_PCT = 18;
   const glowSpread = clamp(
     (GLOW_CLEAN_PCT - zoomPct) / (GLOW_CLEAN_PCT - GLOW_SOFT_PCT),
@@ -299,7 +299,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       // outside, not ballooning it. Clean single disc at >=63% zoom; soft by ~18%.
       ...(glowSpread <= 0.01
         ? [{ id: "glow", rMul: 1, op: 0.06 }]
-        : [0, 0.18, 0.36, 0.54].map((k, idx) => ({
+        : [0, 0.22, 0.44, 0.66].map((k, idx) => ({
             id: idx === 0 ? "glow" : `glow-i${idx}`,
             rMul: 1 - k * glowSpread, // outer disc stays at R; the rest pull in
             op: 0.06 / 4, // 4 stacked -> ~same center alpha as the single 0.06 disc

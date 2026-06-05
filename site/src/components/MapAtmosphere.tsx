@@ -28,11 +28,13 @@ void main(){
   // never enters the central circle (MINR) -- the blooms ride the edges, which
   // reads much prettier than parking light over the dense center.
   vec2 p = vec2(uv.x*asp, uv.y);
-  const float MINR = 0.27;                        // exclude the middle ~35%
-  vec2 o1 = vec2(0.34*sin(t*0.7), 0.30*cos(t*0.9));
-  vec2 o2 = vec2(0.38*sin(t*0.5+2.1), 0.34*cos(t*0.62+1.0));
-  o1 = o1 / max(length(o1), 1e-3) * max(length(o1), MINR);
-  o2 = o2 / max(length(o2), 1e-3) * max(length(o2), MINR);
+  const float MINR = 0.30;                        // exclude the middle ~35%
+  // One slowly-rotating, gently elliptical direction; the two blooms sit on
+  // OPPOSITE sides of center (o2 = -dir) so they never crowd the same edge.
+  float ang = t*0.6;
+  vec2 dir = normalize(vec2(cos(ang), sin(ang*1.08)));
+  vec2 o1 =  dir * max(0.36 + 0.05*sin(t*0.9), MINR);
+  vec2 o2 = -dir * max(0.40 + 0.05*cos(t*0.7), MINR);
   vec2 c1 = vec2((0.5 + o1.x)*asp, 0.5 + o1.y);
   vec2 c2 = vec2((0.5 + o2.x)*asp, 0.5 + o2.y);
   float b1 = smoothstep(0.55, 0.0, length(p - c1));
