@@ -244,15 +244,22 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                     {cells.map((c, i) => (
                       <button
                         key={c.handle + "-" + i}
-                        className={"champcell champcell--topic champcell--" + c.class}
+                        className={"champcell champcell--" + c.class}
                         style={{ ["--cw" as string]: String(c.subSize / sum) }}
                         onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                         onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                         onMouseLeave={() => setHover(null)}
                         onClick={() => onSelectHandle(c.handle)}
                       >
-                        {c.subName && <span className="champcell__sub">{c.subName}</span>}
-                        <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
+                        {data.avatars?.[c.handle] ? (
+                          <img className="champcell__pfp" src={data.avatars[c.handle]} alt="" loading="lazy" />
+                        ) : (
+                          <span className="champcell__pfp champcell__pfp--blank" aria-hidden="true" />
+                        )}
+                        <span className="champcell__txt">
+                          {c.subName && <span className="champcell__sub">{c.subName}</span>}
+                          <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
+                        </span>
                       </button>
                     ))}
                   </div>

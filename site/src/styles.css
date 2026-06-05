@@ -865,13 +865,6 @@ body {
   transition: background 0.15s ease;
 }
 .champcell:hover { background: rgba(255, 255, 255, 0.1); }
-/* by-topic cells: community on one line, @handle on the next, BOTH flush with
-   the cell's left edge (no avatar here -> nothing indents them, same height). */
-.champcell--topic {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-}
 .champcell__pfp {
   width: 20px;
   height: 20px;
