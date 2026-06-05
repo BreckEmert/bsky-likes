@@ -686,16 +686,19 @@ _HL = HIGHLIGHT_HANDLES if BAKE_HIGHLIGHTS else set()
 # individual dots on top client-side, so export_punching still exports positions
 # for the FULL author set.
 author_df = author_df_full
+# Log axes reject non-positive values, so drop the handful of 0-follower accounts
+# for the HEXBIN (they'd sit off-screen below/left of the mins anyway). No +1.
+_pos = author_df[(author_df["followers_count"] > 0) & (author_df["likes_per_post"] > 0)]
 
 fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 hb = ax.hexbin(
-    author_df["followers_count"] + 1,
-    author_df["likes_per_post"] + 1,
+    _pos["followers_count"],               # raw, no +1
+    _pos["likes_per_post"],
     xscale="log", yscale="log",
     gridsize=72, cmap="magma", mincnt=1, norm=LogNorm(),  # match the other density plots
 )
 ax.set_xlim(1e2, 10 ** 6.5)   # followers from 10^2
-ax.set_ylim(1, None)          # avg likes/post from 10^0
+ax.set_ylim(1, None)          # avg likes/post from 10^0 (1 like/post sits on the line)
 cb = fig.colorbar(hb, ax=ax, label="accounts per hex (log)")
 cb.outline.set_visible(False)
 ax.set_xlabel("Follower count")

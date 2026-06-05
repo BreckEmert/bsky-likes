@@ -204,15 +204,15 @@ def export_leaderboards(per_liker, n=50, min_likes=50):
 
 
 def export_punching(author_df):
-    """Plot 9.5 / 'punching'. Axes: x = followers_count + 1 (log),
-    y = likes_per_post + 1 (log). `author_df` is the plotted set (top ~4k +
-    highlighted), a pandas DataFrame with handle/followers_count/likes_per_post.
-    Binary (handles + positions), same contract as the 440k point plots."""
+    """Plot 9.5 / 'punching'. Axes: x = followers_count (log), y = likes_per_post
+    (log) -- RAW, no +1, matching the hexbin; 0-value accounts land off the log
+    axis. `author_df` is the plotted set, a pandas DataFrame with
+    handle/followers_count/likes_per_post. Binary handles + positions."""
     df = author_df[author_df["handle"].notna()]
     handles = [str(h).lower() for h in df["handle"].tolist()]
     xy = np.column_stack([
-        (df["followers_count"].to_numpy() + 1.0).astype(np.float32),
-        (df["likes_per_post"].to_numpy() + 1.0).astype(np.float32),
+        df["followers_count"].to_numpy().astype(np.float32),
+        df["likes_per_post"].to_numpy().astype(np.float32),
     ])
     write_handles_bin(handles, SITE_PLOTS / "punching.handles.bin")
     write_positions_bin(xy, SITE_PLOTS / "punching.positions.bin")
