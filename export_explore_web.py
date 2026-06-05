@@ -140,6 +140,31 @@ if leg_path.exists() and mem_path.exists():
     ctop.tofile(OUT / "colors_topic.bin")
     print(f"[i] colors_topic.bin ({ctop.shape[0]:,} pts, {len(legend)} topics)")
 
+    # --- LOCALLY-DOMINANT topic color (for the GLOW layer only) --------------
+    # The per-point glow is additive, so a small fraction of off-topic dots in a
+    # cluster bleed their hue into its bloom (red specks muddy a blue cluster).
+    # Give every point the DOMINANT topic color of its neighbourhood instead, so
+    # the bloom reads as the cluster's majority color. The crisp dots still use
+    # colors_topic.bin (true per-account color) -- only the soft glow is smoothed.
+    tid = np.array([int(d2t[d]) if d in d2t else -1 for d in dids_sorted])
+    GD = 110  # dominance-grid resolution (the "neighbourhood" size)
+    gx = np.clip(((xs - xMin) / (xMax - xMin) * (GD - 1)).astype(int), 0, GD - 1)
+    gy = np.clip(((ys - yMin) / (yMax - yMin) * (GD - 1)).astype(int), 0, GD - 1)
+    uniq = sorted({int(t) for t in tid if t >= 0})
+    stack = np.zeros((len(uniq), GD, GD), dtype=np.float32)
+    for ti, t in enumerate(uniq):
+        m = tid == t
+        h, _, _ = np.histogram2d(xs[m], ys[m], bins=GD,
+                                 range=[[xMin, xMax], [yMin, yMax]])
+        stack[ti] = gaussian_filter(h, sigma=2.0)  # smooth so dominance is regional
+    tot = stack.sum(axis=0)
+    dom = np.array(uniq)[stack.argmax(axis=0)]      # [GD,GD] dominant topic id per cell
+    cdom = np.array(
+        [legend.get(int(dom[gx[i], gy[i]]), GRAY) if tot[gx[i], gy[i]] > 0 else GRAY
+         for i in range(n)], dtype=np.uint8)
+    cdom.tofile(OUT / "colors_topic_dom.bin")
+    print(f"[i] colors_topic_dom.bin (glow: locally-dominant topic, GD={GD})")
+
 enc = [h.encode("utf-8") for h in handles]
 offs = [0]
 for b in enc:

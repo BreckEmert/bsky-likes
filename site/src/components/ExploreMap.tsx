@@ -289,6 +289,13 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     const b = data.bounds;
     const activeColors =
       colorMode === "topics" && data.colorsTopic ? data.colorsTopic : data.colors;
+    // The GLOW uses a smoothed, locally-DOMINANT topic color in Topics mode, so a
+    // few off-topic dots can't muddy a cluster's bloom (the crisp dots below keep
+    // their true per-account color). Continuum keeps the positional palette.
+    const glowColors =
+      colorMode === "topics"
+        ? data.colorsTopicDom ?? data.colorsTopic ?? data.colors
+        : data.colors;
     const out: unknown[] = [
       // Smooth density-color field behind the dots; fades out as you zoom in.
       new BitmapLayer({
@@ -320,7 +327,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
               length: numVisible,
               attributes: {
                 getPosition: { value: data.points, size: 2 },
-                getFillColor: { value: activeColors, size: 3 },
+                getFillColor: { value: glowColors, size: 3 },
               },
             },
             getRadius: clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * g.rMul,

@@ -13,6 +13,7 @@ export interface ExploreData {
   points: Float32Array; // [x0,y0,x1,y1,...] sorted by followers desc (LOD order)
   colors: Uint8Array; // position-continuum [r,g,b,...] parallel
   colorsTopic: Uint8Array | null; // per-point tier-1 topic color (2nd layer), or null
+  colorsTopicDom: Uint8Array | null; // locally-dominant topic color (glow only), or null
   legend: TopicLegend[] | null; // topic id -> name + color
   handles: string[]; // parallel, lowercased
   index: Map<string, number>;
@@ -43,6 +44,7 @@ interface RawData {
   points: Float32Array;
   colors: Uint8Array;
   colorsTopic: Uint8Array | null;
+  colorsTopicDom: Uint8Array | null;
   handles: string[];
 }
 
@@ -91,6 +93,7 @@ function applyRemovals(
   const points2 = new Float32Array(m * 2);
   const colors2 = new Uint8Array(m * 3);
   const colorsTopic2 = d.colorsTopic ? new Uint8Array(m * 3) : null;
+  const colorsTopicDom2 = d.colorsTopicDom ? new Uint8Array(m * 3) : null;
   const handles2 = new Array<string>(m);
   for (let j = 0; j < m; j++) {
     const i = keep[j];
@@ -104,9 +107,14 @@ function applyRemovals(
       colorsTopic2[3 * j + 1] = d.colorsTopic[3 * i + 1];
       colorsTopic2[3 * j + 2] = d.colorsTopic[3 * i + 2];
     }
+    if (colorsTopicDom2 && d.colorsTopicDom) {
+      colorsTopicDom2[3 * j] = d.colorsTopicDom[3 * i];
+      colorsTopicDom2[3 * j + 1] = d.colorsTopicDom[3 * i + 1];
+      colorsTopicDom2[3 * j + 2] = d.colorsTopicDom[3 * i + 2];
+    }
     handles2[j] = handles[i];
   }
-  return { points: points2, colors: colors2, colorsTopic: colorsTopic2, handles: handles2 };
+  return { points: points2, colors: colors2, colorsTopic: colorsTopic2, colorsTopicDom: colorsTopicDom2, handles: handles2 };
 }
 
 function parseHandles(buf: ArrayBuffer): string[] {
@@ -138,15 +146,17 @@ export function useExploreData(): ExploreData | null {
       fetch(asset("/explore/handles.bin")).then((r) => r.arrayBuffer()),
       fetch(asset("/explore/meta.json")).then((r) => r.json()),
       opt("/explore/colors_topic.bin", "buf"),
+      opt("/explore/colors_topic_dom.bin", "buf"),
       opt("/explore/topic_legend.json", "json"),
     ])
-      .then(([pb, cb, hb, meta, ctb, legend]) => {
+      .then(([pb, cb, hb, meta, ctb, cdb, legend]) => {
         if (cancelled) return;
         const f = applyRemovals(
           {
             points: new Float32Array(pb),
             colors: new Uint8Array(cb),
             colorsTopic: ctb ? new Uint8Array(ctb as ArrayBuffer) : null,
+            colorsTopicDom: cdb ? new Uint8Array(cdb as ArrayBuffer) : null,
             handles: parseHandles(hb),
           },
           meta.bounds
@@ -157,6 +167,7 @@ export function useExploreData(): ExploreData | null {
           points: f.points,
           colors: f.colors,
           colorsTopic: f.colorsTopic,
+          colorsTopicDom: f.colorsTopicDom,
           legend: (legend as TopicLegend[] | null) ?? null,
           handles: f.handles,
           index,
