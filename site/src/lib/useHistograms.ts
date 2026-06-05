@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parseHandles } from "./binary.ts";
 
 export interface HistData {
   bins: number;
@@ -7,19 +8,6 @@ export interface HistData {
   /** de-quantized density for a handle's histogram, or undefined if absent */
   get(handle: string): Float32Array | undefined;
   handles: string[];
-}
-
-function parseHandles(buf: ArrayBuffer): string[] {
-  const dv = new DataView(buf);
-  const count = dv.getUint32(0, true);
-  const offsets = new Uint32Array(buf, 4, count + 1);
-  const start = 4 + (count + 1) * 4;
-  const u8 = new Uint8Array(buf);
-  const dec = new TextDecoder();
-  const out = new Array<string>(count);
-  for (let i = 0; i < count; i++)
-    out[i] = dec.decode(u8.subarray(start + offsets[i], start + offsets[i + 1]));
-  return out;
 }
 
 /**

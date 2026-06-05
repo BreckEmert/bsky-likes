@@ -111,12 +111,13 @@ body {
 /* Bottom: the premade-plots section -- left label + the tabbed plot area. Its
    tab bar peeks at the bottom of the screen while the map is focused. */
 .plots {
+  --plots-label-w: 184px;
   display: flex;
   height: var(--section-h);
   position: relative;
 }
 .plots__label {
-  flex: 0 0 184px;
+  flex: 0 0 var(--plots-label-w);
   /* Vertically centered on the tab row (height var(--tabbar-h)) so the label's
      center lines up with the center of the plot-title buttons; horizontally
      centered text. */
@@ -334,7 +335,7 @@ body {
 }
 
 /* ---- "Highlight 15 you follow" control (punching plot) ---- */
-.followshl { width: 300px; max-width: 78vw; }
+.followshl { width: 510px; max-width: 90vw; }
 .followshl__row { display: flex; gap: 6px; }
 .followshl__field { position: relative; flex: 1 1 auto; min-width: 0; }
 .followshl__input {
@@ -430,14 +431,24 @@ body {
 /* ---- Leaderboards (list-row) ---- */
 .listrows {
   width: 100%;
+  /* cap + center on desktop so the two columns stay symmetric (not stretched to
+     the far edge); collapse the inter-column gap on narrow screens. */
+  max-width: 1000px;
+  margin: 0 auto;
+  box-sizing: border-box;
   height: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
+  gap: clamp(10px, 2.2vw, 28px);
   /* top padding clears the floating search box (top-left over the stage) */
   padding: 48px 4px 0;
   min-height: 0;
   position: relative;
+}
+/* On wide screens the board is capped (1000px) with slack, so pull it left by
+   half the fixed left label to center it on the VIEWPORT, not just the stage. */
+@media (min-width: 1500px) {
+  .listrows { left: calc(var(--plots-label-w) / -2); }
 }
 
 .listcol {
@@ -468,12 +479,13 @@ body {
   grid-template-columns: 28px 1fr;
   align-items: center;
   gap: 8px;
-  padding: 5px 8px;
+  /* no left padding: rank + handle line up with the column title's left edge */
+  padding: 5px 8px 5px 0;
   border-radius: 7px;
   font-size: 13px;
 }
 
-.listrow__rank { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.listrow__rank { color: var(--muted); font-variant-numeric: tabular-nums; text-align: left; }
 .listrow__handle {
   color: var(--text);
   white-space: nowrap;
@@ -700,7 +712,7 @@ body {
   color: var(--muted);
   white-space: nowrap;
 }
-.champs__classnote { font-size: 12.5px; color: var(--muted); }
+.champs__classnote { font-size: 12.5px; color: var(--muted); text-align: right; white-space: nowrap; }
 /* Interlinks with the middle-class cells in the tree: same blue fill + left bar,
    white text. */
 .champs__midchip {
@@ -759,13 +771,21 @@ body {
 .champs__legend li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .champs__sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 
-.champs__note {
+/* table-top bar: per-community note (left) + class-threshold note (right), on
+   one line flush with the top of the table, capped to the same width. */
+.champs__tablebar {
   flex: 0 0 auto;
   width: 100%;
   max-width: var(--champs-maxw);
   margin: 0 auto;
   padding: 0 5% 8px;
   box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+.champs__note {
   font-size: 13px;
   color: var(--muted);
 }
@@ -845,6 +865,19 @@ body {
   transition: background 0.15s ease;
 }
 .champcell:hover { background: rgba(255, 255, 255, 0.1); }
+/* by-topic cells stack: [avatar + community] on top, @handle on its OWN line
+   flush with the cell's left edge (so handles aren't indented by the avatar). */
+.champcell--topic {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+.champcell__top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 .champcell__pfp {
   width: 20px;
   height: 20px;

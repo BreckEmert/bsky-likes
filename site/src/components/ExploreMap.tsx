@@ -366,7 +366,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       );
     }
     // Region labels in two zoom-gated tiers (broad overview -> finer at ~37%).
-    const labelTier = (tier: number, opacity: number, sizeBase: number) => {
+    const labelTier = (tier: number, opacity: number, sizeBase: number, sizeScale = 1) => {
       if (!regions.length || opacity <= 0 || !viewState) return;
       const rz = reveals[tier as 1 | 2];
       const rs = regions.filter(
@@ -384,7 +384,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           data: rs,
           getPosition: (r: Region) => [r.x, r.y],
           getText: (r: Region) => r.name,
-          getSize: (r: Region) => clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12),
+          getSize: (r: Region) =>
+            sizeScale * clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12),
           sizeUnits: "pixels",
           // Tint each label with its own topic/dot color, but pulled most of the
           // way to white (LABEL_WHITE) so the map reads as mostly-white text with
@@ -412,12 +413,15 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           getAlignmentBaseline: "center",
           opacity,
           pickable: false,
-          updateTriggers: { opacity: [opacity], getText: [rs.length] },
+          updateTriggers: { opacity: [opacity], getText: [rs.length], getSize: [sizeScale, sizeBase] },
         })
       );
     };
-    labelTier(1, tier1Opacity, 13); // broad: larger text, fades out by ~38%
-    labelTier(2, tier2Opacity, 11); // finer: smaller text, fades in ~30-40%
+    // On phones the labels read too large -- shrink tier-1 (topic) titles 25%
+    // and tier-2 (community) titles 10%.
+    const isMobile = size.width > 0 && size.width < 640;
+    labelTier(1, tier1Opacity, 13, isMobile ? 0.75 : 1); // broad: fades out by ~38%
+    labelTier(2, tier2Opacity, 11, isMobile ? 0.9 : 1); // finer: fades in ~30-40%
 
     // Void annotations -- faint gray italic, shown on the overview (with tier 1).
     if (tier1Opacity > 0 && VOID_LABELS.length) {

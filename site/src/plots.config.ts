@@ -136,7 +136,7 @@ const RAW_PLOTS: PlotConfig[] = [
   {
     id: "punching",
     tabLabel: "Likes vs Followers",
-    title: "Top 4,000 liked accounts",
+    title: "Likes vs followers — every liked account",
     subtitle: "punch in your handle to light up 15 random accounts you follow",
     image: "/plots/punching.png",
     bounds: "/plots/punching.bounds.json",

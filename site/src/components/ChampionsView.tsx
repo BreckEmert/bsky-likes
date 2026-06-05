@@ -203,17 +203,24 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
               </li>
             ))}
           </ul>
-          <div className="champs__classnote">
-            Famous = 50k+ followers · niche = under 2k
-          </div>
         </div>
       </div>
 
-      {layout === "topic" && (
-        <div className="champs__note">
-          Max 1 champion per community (a community ≈ {medianSize.toLocaleString()} users).
+      {/* table-top bar: the per-community note (left, by-topic only) and the
+          class-threshold note (right) sit on the SAME line, flush with the top
+          of the table. */}
+      <div className="champs__tablebar">
+        {layout === "topic" ? (
+          <div className="champs__note">
+            Max 1 champion per community (a community ≈ {medianSize.toLocaleString()} users).
+          </div>
+        ) : (
+          <span />
+        )}
+        <div className="champs__classnote">
+          Famous = 50k+ followers · niche = under 2k
         </div>
-      )}
+      </div>
 
       <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
         {layout === "topic"
@@ -237,22 +244,22 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                     {cells.map((c, i) => (
                       <button
                         key={c.handle + "-" + i}
-                        className={"champcell champcell--" + c.class}
+                        className={"champcell champcell--topic champcell--" + c.class}
                         style={{ ["--cw" as string]: String(c.subSize / sum) }}
                         onMouseEnter={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                         onMouseMove={(e) => setHover({ c, x: e.clientX, y: e.clientY })}
                         onMouseLeave={() => setHover(null)}
                         onClick={() => onSelectHandle(c.handle)}
                       >
-                        {data.avatars?.[c.handle] ? (
-                          <img className="champcell__pfp" src={data.avatars[c.handle]} alt="" loading="lazy" />
-                        ) : (
-                          <span className="champcell__pfp champcell__pfp--blank" aria-hidden="true" />
-                        )}
-                        <span className="champcell__txt">
+                        <span className="champcell__top">
+                          {data.avatars?.[c.handle] ? (
+                            <img className="champcell__pfp" src={data.avatars[c.handle]} alt="" loading="lazy" />
+                          ) : (
+                            <span className="champcell__pfp champcell__pfp--blank" aria-hidden="true" />
+                          )}
                           {c.subName && <span className="champcell__sub">{c.subName}</span>}
-                          <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
                         </span>
+                        <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
                       </button>
                     ))}
                   </div>
