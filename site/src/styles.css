@@ -1143,6 +1143,12 @@ body {
   }
   .champs__tree--flat .champrow__size { display: none; }
 
+  /* Plots: use the width better on phones -- trim the side padding so the image
+     spans nearly the full screen (it was boxed in by the desktop 20px gutters),
+     and don't reserve as much header height. */
+  .plotpage { padding: 10px 6px 14px; }
+  .plotpage__header { min-height: 0; }
+
   /* No hover on touch: keep the climb-up chevron permanently visible on plots. */
   .app--plots .mapchev { opacity: 0.5; pointer-events: auto; }
 
