@@ -287,8 +287,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   // dot is a FRACTION of it (`dotPct`) that grows with zoom. So at low zoom the dot
   // is a small core inside a big topic bloom; as you zoom in the dot grows to fill
   // the circle and the glow recedes to a thin halo -> the point gets "specific".
-  const circle = clamp(pointRadius * 3.5, 2.2 * mobileScale, 16);
-  const dotPct = clamp(0.2 + zoomPct / 120, 0.2, 0.85);
+  const circle = clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * 0.8;
+  const dotPct = clamp(0.1 + zoomPct / 240, 0.1, 0.425);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
