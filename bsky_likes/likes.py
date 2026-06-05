@@ -223,11 +223,13 @@ async def pull_backward(client, did, oldest_captured, extra_cap, sem, cutoff):
 # ORCHESTRATORS (pull -> buffer -> flush shard -> checkpoint state)
 # ============================================================================
 async def run_initial(client, user_dids, state, state_path, cutoff,
-                      deadline=None, cap=None, out_dir=None):
+                      deadline=None, cap=None, out_dir=None, concurrency=None):
     """Orchestrate the initial-style pull. `cap`/`out_dir` default to the
     standard cap and LIKES_DIR; the `sweep` mode passes cap=float("inf") and a
-    separate out_dir for an uncapped crawl into its own shard directory."""
-    sem = asyncio.Semaphore(config.CONCURRENCY)
+    separate out_dir for an uncapped crawl into its own shard directory.
+    `concurrency` overrides config.CONCURRENCY (the sweep passes its --concurrency
+    so the flag actually takes effect on the worker semaphore, not just the pool)."""
+    sem = asyncio.Semaphore(concurrency or config.CONCURRENCY)
     pending = [d for d in user_dids if d not in state["done_users"]]
     print(f"Pulling likes for {len(pending):,} users "
           f"({len(state['done_users']):,} already done)...")

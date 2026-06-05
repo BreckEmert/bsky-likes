@@ -461,7 +461,7 @@ async def run_sweep_mode(args):
 
         await likes_mod.run_initial(
             client, targets, state, config.SWEEP_STATE_PATH, since,
-            cap=float("inf"), out_dir=out_dir)
+            cap=float("inf"), out_dir=out_dir, concurrency=args.concurrency)
 
         # Enrich posts/users newly discovered in the sweep shards, reusing the
         # existing enriched tables.
