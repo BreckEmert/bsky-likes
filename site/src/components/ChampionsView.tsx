@@ -86,6 +86,9 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
   const cc = active.classCounts;
   const total = cc.upper + cc.middle + cc.lower || 1;
   const nonFamousPct = Math.round(((cc.middle + cc.lower) / total) * 100);
+  // median community size, for the by-topic note (one champion per community)
+  const sizes = active.communities.map((c) => c.subSize).sort((a, b) => a - b);
+  const medianSize = sizes.length ? Math.round(sizes[sizes.length >> 1] / 100) * 100 : 0;
 
   // resolve the searched handle -> its sub + topic, and float those rows up
   // A champion is an AUTHOR and often isn't a member of the community they lead,
@@ -197,6 +200,12 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
           </div>
         </div>
       </div>
+
+      {layout === "topic" && (
+        <div className="champs__note">
+          Max 1 champion per community (a community ≈ {medianSize.toLocaleString()} users).
+        </div>
+      )}
 
       <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
         {layout === "topic"
