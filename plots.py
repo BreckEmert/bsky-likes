@@ -85,8 +85,10 @@ import os
 # for the website, and per-handle lookups are written at the end. The export
 # logic lives in export_web.py; plots.py only carries thin guarded hooks.
 WEB_EXPORT = os.environ.get("WEB_EXPORT") == "1"
-if WEB_EXPORT:
-    import export_web as ew
+# Import unconditionally (it's cheap) so `ew` always exists -- otherwise toggling
+# WEB_EXPORT after this cell ran in Spyder leaves the guarded `ew.*` calls with
+# `name 'ew' is not defined`.
+import export_web as ew
 
 PROJECT_DIR = config.PROJECT_DIR
 PLOTS_DIR   = config.PLOTS_DIR
