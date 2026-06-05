@@ -699,6 +699,7 @@ hb = ax.hexbin(
 )
 ax.set_xlim(1e2, 10 ** 6.5)   # followers from 10^2
 ax.set_ylim(1, None)          # avg likes/post from 10^0 (1 like/post sits on the line)
+ax.set_aspect("equal", adjustable="box")  # 1 decade x == 1 decade y -> undistorted hexes
 cb = fig.colorbar(hb, ax=ax, label="accounts per hex (log)")
 cb.outline.set_visible(False)
 ax.set_xlabel("Follower count")
