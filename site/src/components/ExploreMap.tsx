@@ -54,6 +54,29 @@ const ZOOM_SPAN = 6;      // max zoom == fit + ZOOM_SPAN (keep in sync below)
 const MIN_ZOOM_PCT = 18;  // floor the zoom-out here (was the fit, 0%); too far out
 const LOD_FULL_PCT = 63;  // zoom % at which the full point set is shown
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+// The map fly-to between map<->plots must use the SAME easing (and duration) as
+// the section slide in App.tsx, or the camera lags the scrolling window. App's
+// slide is CSS cubic-bezier(.33,0,.2,1); evaluate that exact curve here.
+function cubicBezier(p1x: number, p1y: number, p2x: number, p2y: number) {
+  const cx = 3 * p1x, bx = 3 * (p2x - p1x) - cx, ax = 1 - cx - bx;
+  const cy = 3 * p1y, by = 3 * (p2y - p1y) - cy, ay = 1 - cy - by;
+  const sx = (t: number) => ((ax * t + bx) * t + cx) * t;
+  const sy = (t: number) => ((ay * t + by) * t + cy) * t;
+  const dsx = (t: number) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x: number) => {
+    let t = x;
+    for (let i = 0; i < 6; i++) {
+      const e = sx(t) - x;
+      if (Math.abs(e) < 1e-5) break;
+      const d = dsx(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= e / d;
+    }
+    return sy(clamp(t, 0, 1));
+  };
+}
+const SLIDE_MS = 850; // keep in sync with App.tsx stage slide
+const SLIDE_EASE = cubicBezier(0.33, 0, 0.2, 1); // keep in sync with App.tsx
 // MONOTONIC label LOD: precompute, per label, the zoom at which it first stops
 // overlapping every HIGHER-priority (bigger) label. Then at runtime show labels
 // whose reveal-zoom <= current zoom. Zooming in only ever ADDS labels (never
@@ -228,10 +251,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     flyingRef.current = true;
     setViewState({
       ...dest,
-      transitionDuration: 850,
+      transitionDuration: SLIDE_MS,
       transitionInterpolator: new LinearInterpolator(["target", "zoom"]),
-      transitionEasing: (t: number) =>
-        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+      transitionEasing: SLIDE_EASE,
       onTransitionEnd: () => {
         flyingRef.current = false;
         setViewState(dest);
