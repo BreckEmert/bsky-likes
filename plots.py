@@ -90,6 +90,12 @@ if WEB_EXPORT:
 
 PROJECT_DIR = config.PROJECT_DIR
 PLOTS_DIR   = config.PLOTS_DIR
+
+# Consistent canvas for EVERY web-exported plot, so they all frame identically and
+# fill the site's wide plot stage instead of letterboxing at assorted aspects
+# (was 9x7, 11x6.5, 10x9, 7x7, 12x7.5, 11x4.81...). ~2.2:1 matches the stage; the
+# overlay stays aligned because export_web recomputes bounds from the axes.
+WEB_FIGSIZE = (12.5, 5.7)
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Visual style — clean modern look that screenshots well on Bluesky
@@ -242,7 +248,7 @@ sub = (per_liker
        .select(["median_post_likes", "mean_post_likes"])
        .to_pandas())
 
-fig, ax = plt.subplots(figsize=(9, 7))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 hb = ax.hexbin(sub["median_post_likes"] + 1,
                sub["mean_post_likes"] + 1,
                gridsize=60, xscale="log", yscale="log",
@@ -333,7 +339,7 @@ segments = np.stack(
     axis=-1
 )  # shape (n_users, n_bins, 2)
 
-fig, ax = plt.subplots(figsize=(11, 6.5))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 lc = LineCollection(segments, colors=BSKY_BLUE, alpha=0.025, linewidths=0.8)
 ax.add_collection(lc)
 
@@ -383,7 +389,7 @@ xx = author_eng["avg_likes"].to_numpy()
 yy = author_eng["avg_reposts"].to_numpy()
 print(f"  authors with >=5 posts and avg >=1 of each: {len(xx):,}")
 
-fig, ax = plt.subplots(figsize=(10, 9))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 hb = ax.hexbin(xx, yy, gridsize=80, xscale="log", yscale="log",
                cmap="inferno", mincnt=1, norm=LogNorm())
 cb = fig.colorbar(hb, ax=ax, label="authors per hex (log)")
@@ -485,7 +491,7 @@ for _r in _binned.iter_rows(named=True):
     if 0 <= _r["bi"] < _nb:
         counts[_r["bi"]] = _r["n"]
 
-fig, ax = plt.subplots(figsize=(11, 6.5))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 ax.stairs(counts, edges, fill=True, color=BSKY_BLUE, alpha=0.85)
 ax.set_xscale("log")
 
@@ -543,7 +549,7 @@ print("                a slope of  0 = 'taste is independent of own popularity';
 print("                a slope of -1 = 'the more popular we are, the more obscure our taste'")
 
 # ---- PLOT ----
-fig, ax = plt.subplots(figsize=(7, 7))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 hb = ax.hexbin(x, y, gridsize=60,
                xscale="log", yscale="log",
                cmap="magma", mincnt=2, norm=LogNorm())
@@ -681,7 +687,7 @@ if len(missing) > 0:
     top4000 = pd.concat([top4000, missing], ignore_index=True)
 author_df = top4000
 
-fig, ax = plt.subplots(figsize=(12, 7.5))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 ax.scatter(author_df["followers_count"] + 1,
            author_df["likes_per_post"] + 1,
            s=8, c=author_df["engagement_ratio"], cmap="plasma",
@@ -807,7 +813,7 @@ mat = np.zeros((7, 24))
 for row in times.iter_rows(named=True):
     mat[row["dow"]-1, row["hour"]] = row["n"]
 
-fig, ax = plt.subplots(figsize=(11, 4.81))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 im = ax.imshow(mat, aspect="auto", cmap="magma", interpolation="nearest")
 ax.set_yticks(range(7))
 ax.set_yticklabels(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
@@ -866,7 +872,7 @@ def lorenz_powerlaw(p, gini):
     a = (1 + gini) / (1 - gini)
     return p ** a
 
-fig, ax = plt.subplots(figsize=(7, 7))
+fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 ax.plot([0, 1], [0, 1], "--", color="#9aa4b1", alpha=0.5, label="perfect equality")
 ax.plot(p, lorenz_powerlaw(p, 0.48), color="#10b981", linewidth=2,
         label="US income (Gini ≈ 0.48)")
