@@ -367,7 +367,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       if (!regions.length || opacity <= 0 || !viewState) return;
       const rz = reveals[tier as 1 | 2];
       const rs = regions.filter(
-        (r) => (r.tier ?? 1) === tier && (rz.get(r) ?? -Infinity) <= viewState.zoom
+        (r) =>
+          (r.tier ?? 1) === tier &&
+          // tier-1 (broad overview labels) ALWAYS show -- positioned by their
+          // manual offsets in regions.json, no auto-declutter. Only tier-2 keeps
+          // the progressive zoom-reveal (there are ~49 of them).
+          (tier !== 1 ? (rz.get(r) ?? -Infinity) <= viewState.zoom : true)
       );
       if (!rs.length) return;
       out.push(
