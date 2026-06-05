@@ -88,12 +88,26 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
   const nonFamousPct = Math.round(((cc.middle + cc.lower) / total) * 100);
 
   // resolve the searched handle -> its sub + topic, and float those rows up
-  const matchedSub =
-    selectedHandle != null ? members?.subOf.get(selectedHandle.toLowerCase()) : undefined;
+  // A champion is an AUTHOR and often isn't a member of the community they lead,
+  // so map champion handles -> the sub they champion (in the active lens) too, and
+  // prefer that over plain membership when someone searches a champion.
   const subToTopic = new Map<number, number>();
-  active.communities.forEach((c) => subToTopic.set(c.sub, c.topic));
+  const championSub = new Map<string, number>();
+  active.communities.forEach((c) => {
+    subToTopic.set(c.sub, c.topic);
+    c.champions.forEach((ch) => {
+      const h = ch.handle.toLowerCase();
+      if (!championSub.has(h)) championSub.set(h, c.sub);
+    });
+  });
+  const lh = selectedHandle?.toLowerCase();
+  const matchedSub =
+    lh != null ? championSub.get(lh) ?? members?.subOf.get(lh) : undefined;
   const matchedTopic = matchedSub != null ? subToTopic.get(matchedSub) : undefined;
-  const notInCommunity = selectedHandle != null && members != null && matchedSub == null;
+  // only "not in a community" once the membership lookup has loaded AND they're
+  // not a champion either
+  const notInCommunity =
+    lh != null && members != null && matchedSub == null;
   const orderedTopics =
     matchedTopic == null
       ? active.topics
