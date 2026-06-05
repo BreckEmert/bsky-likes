@@ -40,57 +40,60 @@ SITE_PLOTS.mkdir(parents=True, exist_ok=True)
 # ===========================================================================
 # PNG + BOUNDS
 # ===========================================================================
-def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200):
-    """Save a transparent PNG (title/subtitle blanked, quotes kept) and a
-    bounds.json giving the axes' pixel rect in the saved PNG's pixel space.
+# Squarish / slightly-portrait canvas for the MOBILE variant of every web plot.
+# Wide desktop plots become much taller here so they fill a phone's vertical space
+# instead of being a short strip; the site loads only the matching one per viewport.
+MOBILE_FIG = (6.5, 7.0)
 
-    The figure background is transparent; the axes keep their dark facecolor,
-    which matches the site's dark theme. The PNG MUST be the full, uncropped
-    figure so its pixel size equals imgWidth/imgHeight and plotArea (computed in
-    full-figure coords below) lines up. savefig(bbox_inches=None) does NOT do
-    that -- it defers to rcParams['savefig.bbox'], which plots.py sets to
-    'tight', cropping the image and breaking the pixel mapping. So we force the
-    full figure via rc_context(savefig.bbox=None) at save time.
+
+def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200):
+    """Save a transparent PNG + bounds.json (axes' pixel rect) for the site.
+
+    Emits TWO variants from the SAME drawn figure:
+      {id}.png / {id}.bounds.json          -- desktop, at the cell's figsize
+      {id}.mobile.png / {id}.mobile.bounds.json -- re-rendered at MOBILE_FIG
+    The site picks one per viewport via <picture>, so a phone never downloads the
+    desktop image (and vice-versa). The PNG MUST be the full, uncropped figure so
+    its pixel size equals imgWidth/imgHeight; rcParams sets savefig.bbox='tight',
+    which would crop it, so we force the full figure via rc_context at save time.
     """
     import matplotlib as mpl
-    # Suppress title + subtitle (rendered as HTML on the site). Both the axes
-    # title (used by most cells, sometimes carrying the subtitle as line 2) and
-    # any figure suptitle are blanked. In-plot quotes/annotations are ax.text/
-    # fig.text and are left untouched.
+    # Suppress title + subtitle (rendered as HTML on the site). In-plot quotes are
+    # ax.text/fig.text and are left untouched.
     ax.set_title("")
     if getattr(fig, "_suptitle", None) is not None:
         fig._suptitle.set_text("")
 
-    x_min, x_max = ax.get_xlim()
-    y_min, y_max = ax.get_ylim()
+    def _save(suffix):
+        x_min, x_max = ax.get_xlim()
+        y_min, y_max = ax.get_ylim()
+        fig.canvas.draw()  # finalize layout before reading positions
+        fig_w_px = fig.get_figwidth() * dpi
+        fig_h_px = fig.get_figheight() * dpi
+        pos = ax.get_position()  # figure-fraction bbox; y is bottom-up
+        png_path = SITE_PLOTS / f"{plot_id}{suffix}.png"
+        with mpl.rc_context({"savefig.bbox": None, "savefig.pad_inches": 0}):
+            fig.savefig(png_path, dpi=dpi, transparent=True)
+        bounds = {
+            "xMin": float(x_min), "xMax": float(x_max),
+            "yMin": float(y_min), "yMax": float(y_max),
+            "xLog": bool(x_log), "yLog": bool(y_log),
+            "imgWidth": int(round(fig_w_px)), "imgHeight": int(round(fig_h_px)),
+            "plotArea": {
+                "left": float(pos.x0 * fig_w_px), "top": float((1.0 - pos.y1) * fig_h_px),
+                "right": float(pos.x1 * fig_w_px), "bottom": float((1.0 - pos.y0) * fig_h_px),
+            },
+        }
+        (SITE_PLOTS / f"{plot_id}{suffix}.bounds.json").write_text(json.dumps(bounds, indent=2))
+        print(f"[OK] {plot_id}{suffix}: png ({png_path.stat().st_size/1e3:.0f} KB) + bounds")
+        return bounds
 
-    fig.canvas.draw()  # finalize layout before reading positions
-    fig_w_px = fig.get_figwidth() * dpi
-    fig_h_px = fig.get_figheight() * dpi
-
-    pos = ax.get_position()  # figure-fraction bbox; y is bottom-up
-    left_px = pos.x0 * fig_w_px
-    right_px = pos.x1 * fig_w_px
-    top_px = (1.0 - pos.y1) * fig_h_px      # flip to top-down PNG pixels
-    bottom_px = (1.0 - pos.y0) * fig_h_px
-
-    png_path = SITE_PLOTS / f"{plot_id}.png"
-    with mpl.rc_context({"savefig.bbox": None, "savefig.pad_inches": 0}):
-        fig.savefig(png_path, dpi=dpi, transparent=True)
-
-    bounds = {
-        "xMin": float(x_min), "xMax": float(x_max),
-        "yMin": float(y_min), "yMax": float(y_max),
-        "xLog": bool(x_log), "yLog": bool(y_log),
-        "imgWidth": int(round(fig_w_px)), "imgHeight": int(round(fig_h_px)),
-        "plotArea": {
-            "left": float(left_px), "top": float(top_px),
-            "right": float(right_px), "bottom": float(bottom_px),
-        },
-    }
-    (SITE_PLOTS / f"{plot_id}.bounds.json").write_text(json.dumps(bounds, indent=2))
-    print(f"[OK] {plot_id}: png ({png_path.stat().st_size/1e3:.0f} KB) + bounds")
-    return bounds
+    orig = fig.get_size_inches().copy()
+    desktop = _save("")                # desktop, at the cell's figsize
+    fig.set_size_inches(*MOBILE_FIG)
+    _save(".mobile")                   # mobile, squarish portrait
+    fig.set_size_inches(*orig)         # restore so the cell's plt.show() is unaffected
+    return desktop
 
 
 # ===========================================================================

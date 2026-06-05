@@ -39,10 +39,40 @@ function debugPoint(): { x: number; y: number } | null {
   return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
 }
 
+// Phone viewport -> use the .mobile.png / .mobile.bounds.json variants (squarer,
+// fills vertical space). The <picture> below downloads only the matching image;
+// bounds are fetched per-viewport. 640px matches the CSS mobile breakpoint.
+function useIsMobile(): boolean {
+  const q = "(max-width: 640px)";
+  const [m, setM] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(q).matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(q);
+    const on = () => setM(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return m;
+}
+
 export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
   const [stageRef, stageSize] = useElementSize<HTMLDivElement>();
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
-  const bounds = useBounds(plot.bounds);
+  const isMobile = useIsMobile();
+  // Use the .mobile.png / .mobile.bounds.json variant on phones. If it 404s (a plot
+  // not regenerated yet), fall back to the desktop asset so nothing breaks.
+  const [mobileMissing, setMobileMissing] = useState(false);
+  useEffect(() => setMobileMissing(false), [plot.id]);
+  const useMobile = isMobile && !mobileMissing && !!plot.image;
+  const imgSrc = useMobile ? plot.image!.replace(/\.png$/, ".mobile.png") : plot.image;
+  const boundsUrl =
+    useMobile && plot.bounds
+      ? plot.bounds.replace(/\.bounds\.json$/, ".mobile.bounds.json")
+      : plot.bounds;
+  const bounds = useBounds(boundsUrl);
+  // re-measure the image when the variant swaps (mobile/desktop differ in size)
+  useEffect(() => setNatural(null), [isMobile, mobileMissing]);
   // Binary point data (handles + positions) for every searchable point plot
   // (svg-point and deck-scatter). One loader, one contract.
   const points = usePointData(plot.data?.handles, plot.data?.positions);
@@ -183,11 +213,12 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
 
         {plot.image ? (
           <img
-            key={plot.id}
+            key={plot.id + (useMobile ? "-m" : "")}
             className={`plotpage__image plotpage__image--${plot.id}`}
-            src={plot.image}
+            src={imgSrc ?? undefined}
             alt={plot.title}
             draggable={false}
+            onError={() => useMobile && setMobileMissing(true)}
             onLoad={(e) =>
               setNatural({
                 w: e.currentTarget.naturalWidth,

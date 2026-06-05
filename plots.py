@@ -470,9 +470,13 @@ plt.close('all')  # free figure memory from the previous cell
 # For every like, age_at_like = like_created_at - post_created_at.
 print("\n[7/10] Engagement Half-Life")
 
-# Bin edges in seconds, log-spaced from 1 minute to 1 year (59 bins).
-edges = np.logspace(np.log10(60), np.log10(365*24*3600), 60)
-_lo, _hi, _nb = np.log10(60), np.log10(365 * 24 * 3600), len(edges) - 1
+# Bin edges log-spaced from 1 minute to 4 MONTHS. Capped at 4mo because posts made
+# before we began collecting aren't in posts.parquet, so the join can't see their
+# early likes -- the longer-age tail is collection-biased + sparse (anti-bias), and
+# it was empty dead space on the right anyway.
+_MAXAGE = 120 * 24 * 3600   # 4 months
+edges = np.logspace(np.log10(60), np.log10(_MAXAGE), 60)
+_lo, _hi, _nb = np.log10(60), np.log10(_MAXAGE), len(edges) - 1
 _step = (_hi - _lo) / _nb
 
 # Histogram the per-like age INSIDE polars: assign each age to a log-bin and
@@ -484,7 +488,7 @@ _binned = (joined_lazy
         ((pl.col("like_created_at") - pl.col("post_created_at"))
          .dt.total_seconds()).alias("age")
     )
-    .filter((pl.col("age") > 0) & (pl.col("age") < 365 * 24 * 3600))
+    .filter((pl.col("age") > 0) & (pl.col("age") < _MAXAGE))
     .with_columns(pl.col("age").log10().alias("la"))
     .filter((pl.col("la") >= _lo) & (pl.col("la") < _hi))
     .with_columns(((pl.col("la") - _lo) / _step).floor().cast(pl.Int32).alias("bi"))
@@ -496,7 +500,7 @@ for _r in _binned.iter_rows(named=True):
     if 0 <= _r["bi"] < _nb:
         counts[_r["bi"]] = _r["n"]
 
-fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
+fig, ax = plt.subplots(figsize=(9.4, 5.7))   # x squashed ~25% from the wide default
 ax.stairs(counts, edges, fill=True, color=BSKY_BLUE, alpha=0.85)
 ax.set_xscale("log")
 
@@ -508,7 +512,7 @@ markers = [
     (60*60*24,       "1 day"),
     (60*60*24*7,     "1 week"),
     (60*60*24*30,    "1 month"),
-    (60*60*24*365,   "1 year"),
+    (60*60*24*90,    "3 mo"),
 ]
 for sec, label in markers:
     ax.axvline(sec, color="#9aa4b1", alpha=0.3, linewidth=0.8)
@@ -757,17 +761,17 @@ times = (joined_lazy
 n_heat = int(times["n"].sum())
 print(f"  per-user whole-week trim: {n_heat:,} likes")
 
-mat = np.zeros((7, 24))
+mat = np.zeros((7, 8))   # 3-hour blocks: 24h / 3 = 8 columns
 for row in times.iter_rows(named=True):
-    mat[row["dow"]-1, row["hour"]] = row["n"]
+    mat[row["dow"]-1, row["hour"] // 3] += row["n"]
 
 fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
 im = ax.imshow(mat, aspect="auto", cmap="magma", interpolation="nearest")
 ax.set_yticks(range(7))
 ax.set_yticklabels(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
-ax.set_xticks(range(0, 24, 2))
-ax.set_xticklabels([f"{h:02d}:00" for h in range(0, 24, 2)])
-ax.set_xlabel("Hour of day (UTC)")
+ax.set_xticks(range(8))
+ax.set_xticklabels([f"{h:02d}:00" for h in range(0, 24, 3)])
+ax.set_xlabel("Hour of day (UTC, 3-hour blocks)")
 ax.set_title("When Bluesky Wakes Up", loc="left", fontsize=16)
 # Quote OUTSIDE the axes, in the top margin to the right of the title.
 # Shrink the axes' top so the heatmap shifts down and leaves room.
