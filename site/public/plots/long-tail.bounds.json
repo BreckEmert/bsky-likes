@@ -5,12 +5,12 @@
   "yMax": 1.0,
   "xLog": false,
   "yLog": false,
-  "imgWidth": 1400,
-  "imgHeight": 1400,
+  "imgWidth": 2500,
+  "imgHeight": 1140,
   "plotArea": {
-    "left": 178.5,
-    "top": 168.0,
-    "right": 1256.5,
-    "bottom": 1246.0
+    "left": 842.35,
+    "top": 136.79999999999998,
+    "right": 1720.1500000000003,
+    "bottom": 1014.6
   }
 }
