@@ -283,6 +283,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     0,
     1
   );
+  // Shrink the glow as you zoom in: full radius on the overview, 80% by ~70% zoom
+  // (and held there), so the bloom tightens and the dots read more individually.
+  const glowRadiusScale = 1 - 0.2 * Math.min(1, zoomPct / 70);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -330,13 +333,13 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
                 getFillColor: { value: glowColors, size: 3 },
               },
             },
-            getRadius: clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * g.rMul,
+            getRadius: clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * g.rMul * glowRadiusScale,
             radiusUnits: "pixels",
-            radiusMinPixels: 2.2 * mobileScale * g.rMul,
+            radiusMinPixels: 2.2 * mobileScale * g.rMul * glowRadiusScale,
             opacity: g.op,
             pickable: false,
             updateTriggers: {
-              getRadius: [pointRadius, glowSpread],
+              getRadius: [pointRadius, glowSpread, glowRadiusScale],
               getFillColor: [colorMode],
             },
           })
@@ -350,9 +353,11 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
             getFillColor: { value: activeColors, size: 3 },
           },
         },
-        getRadius: pointRadius,
+        // dots 90% wider (diameter x1.9) than the glow's base radius, so community
+        // colors stay visible inside a topic's (dominant-colored) bloom.
+        getRadius: pointRadius * 1.9,
         radiusUnits: "pixels",
-        radiusMinPixels: 0.4 * mobileScale,
+        radiusMinPixels: 0.4 * 1.9 * mobileScale,
         opacity: 0.85,
         pickable: true,
         autoHighlight: true,
@@ -462,7 +467,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, isMobile]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, glowRadiusScale, isMobile]);
 
   return (
     <div className="exploremap" ref={ref}>
