@@ -604,7 +604,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
         <div className="exploremap__zoom">
           zoom {zoomPct}%
           <span className="exploremap__zoom-sep">·</span>
-          {numVisible.toLocaleString()} / {data.n.toLocaleString()} pts
+          {numVisible.toLocaleString()} / {data.n.toLocaleString()} profiles
         </div>
       )}
     </div>
