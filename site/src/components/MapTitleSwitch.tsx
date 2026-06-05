@@ -26,7 +26,7 @@ export function MapTitleSwitch({ view, onSwitch, opacity = 1 }: Props) {
           className={"maptitle__sub" + (view === "champions" ? " is-on" : "")}
           onClick={() => onSwitch("champions")}
         >
-          top accounts per topic
+          top accounts per liked topic
         </button>
       </div>
     </div>

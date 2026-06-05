@@ -118,12 +118,20 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
           ...active.topics.filter((t) => t.topic === matchedTopic),
           ...active.topics.filter((t) => t.topic !== matchedTopic),
         ];
+  // group the by-community rows by their tier-1 topic (topics in the same order as
+  // the by-topic view, biggest first), then by size within a topic
+  const topicRank = new Map(active.topics.map((t, i) => [t.topic, i]));
+  const byTopic = [...active.communities].sort(
+    (a, b) =>
+      (topicRank.get(a.topic) ?? 99) - (topicRank.get(b.topic) ?? 99) ||
+      b.subSize - a.subSize
+  );
   const orderedCommunities =
     matchedSub == null
-      ? active.communities
+      ? byTopic
       : [
-          ...active.communities.filter((c) => c.sub === matchedSub),
-          ...active.communities.filter((c) => c.sub !== matchedSub),
+          ...byTopic.filter((c) => c.sub === matchedSub),
+          ...byTopic.filter((c) => c.sub !== matchedSub),
         ];
 
   return (
@@ -196,7 +204,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
             ))}
           </ul>
           <div className="champs__classnote">
-            Famous = 50k+ followers · niche = under 2k (middle’s in between)
+            Famous = 50k+ followers · niche = under 2k
           </div>
         </div>
       </div>
