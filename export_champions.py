@@ -233,7 +233,9 @@ def build_variant(rank, floor):
 FLOORS = {
     "loyalty": pl.col("superfans") >= SUPERFAN_FLOOR,
     "devotion": pl.col("superfans") >= SUPERFAN_FLOOR,
-    "distinct": pl.col("pen") >= DISTINCT_FLOOR,
+    # lift, but also require a real local following (>=10 superfans), else it
+    # surfaces accounts liked ONCE by many (0-1 superfans) -> obscure flukes.
+    "distinct": (pl.col("pen") >= DISTINCT_FLOOR) & (pl.col("superfans") >= SUPERFAN_FLOOR),
     "likerate": (pl.col("uf") >= LIKERATE_MIN_FANS) & (pl.col("npost") >= MED_POST),
 }
 variants = {}
