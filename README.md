@@ -65,7 +65,7 @@ python ingest.py initial [--test-seconds N]   # full 2-hop crawl + enrich (found
 python ingest.py forward                       # pull NEW likes since each user's last capture
 python ingest.py backward                      # variable-cap backfill for heavy, short-span users
 python ingest.py add-handles [HANDLE ...]      # append likes for specific handles
-python ingest.py sweep [--since DATE] [--targets all-b|known-likers]   # clean UNCAPPED pull (NOT YET RUN)
+python ingest.py sweep [--since DATE] [--targets clustered|known-likers|all-b] [--concurrency N]   # clean UNCAPPED pull
 ```
 
 - **`initial`** builds A→B and does the first full capture. `--test-seconds N`
@@ -144,3 +144,18 @@ Python 3.12. Ingest needs `httpx` + `polars`; analysis additionally needs
 
 Dataset captured and validated. Codebase consolidated into a shared
 `bsky_likes` library behind a single ingest CLI.
+
+## License & data
+
+- **Code** is released under the [MIT License](LICENSE).
+- **Data** shown in the site and plots is derived from **public Bluesky
+  activity** (likes, posts, and follow graphs available through the public AT
+  Protocol API), aggregated into clusters and per-community summaries. No private
+  data is included, and the raw capture (`bsky_data/`, which embeds account DIDs)
+  is **not** part of this repository.
+- Popularity figures (like and follower counts) are public profile/post values at
+  capture time; community-specific metrics are computed from a sampled, recent
+  window of likes, so treat them as directional rather than exact.
+
+The MIT license covers this project's code only; use of the underlying Bluesky
+data is subject to Bluesky's terms.
