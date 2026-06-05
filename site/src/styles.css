@@ -1153,6 +1153,11 @@ body {
      plot image bleed toward the screen edges -- the stage breaks out of the side
      padding a touch (there's room). */
   .plotpage__stage { margin-left: -14px; margin-right: -14px; }
+  /* Narrow the handle search (~65% of before) so the "ranks by mainstreaminess"
+     note beside it isn't pushed off-screen. (Follows box sets its own width.) */
+  .plotpage__search { width: 165px; max-width: 46%; }
+  /* the note sits to the search's right -> shrink it so it fits the rest of the row */
+  .plotpage__nothere { width: 170px; }
 
   /* No hover on touch: keep the climb-up chevron permanently visible on plots. */
   .app--plots .mapchev { opacity: 0.5; pointer-events: auto; }
