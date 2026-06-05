@@ -690,7 +690,7 @@ hb = ax.hexbin(
     author_df["followers_count"] + 1,
     author_df["likes_per_post"] + 1,
     xscale="log", yscale="log",
-    gridsize=72, cmap="plasma", mincnt=1, bins="log", linewidths=0.2,
+    gridsize=72, cmap="magma", mincnt=1, norm=LogNorm(),  # match the other density plots
 )
 ax.set_xlim(1e2, 10 ** 6.5)   # followers from 10^2
 ax.set_ylim(1, None)          # avg likes/post from 10^0
