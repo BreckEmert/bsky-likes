@@ -237,6 +237,7 @@ async def run_initial(client, user_dids, state, state_path, cutoff,
     buffer = []
     processed = 0
     start = time.time()
+    win_t, win_n = start, 0   # window anchor for the INSTANTANEOUS rate (not cumulative)
     shard_idx = state.get("shard_idx", 0)
 
     async def worker(did):
@@ -252,13 +253,17 @@ async def run_initial(client, user_dids, state, state_path, cutoff,
             processed += 1
 
             if processed % 50 == 0:
-                elapsed = time.time() - start
-                rate = processed / elapsed
-                eta_sec = (len(pending) - processed) / rate if rate > 0 else 0
+                now = time.time()
+                # instantaneous rate over the last window (the real current speed);
+                # the cumulative avg only ever decays from the startup burst.
+                inst = (processed - win_n) / (now - win_t) if now > win_t else 0.0
+                avg = processed / (now - start) if now > start else 0.0
+                eta_sec = (len(pending) - processed) / inst if inst > 0 else 0
                 print(f"  [{processed}/{len(pending)}] "
                       f"likes buffered: {len(buffer):,}  "
-                      f"rate: {rate:.1f} users/s  "
+                      f"rate: {inst:.1f}/s (avg {avg:.1f})  "
                       f"eta: {eta_sec/3600:.1f}h")
+                win_t, win_n = now, processed
 
             # SAVE STATE rarely (it re-serializes the whole growing done_users
             # set, which blocks the event loop and drags the rate down as the set
