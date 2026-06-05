@@ -130,11 +130,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
       <div className="champs__head">
         <div className="champs__intro">
           <div className="champs__title">Who does each community rally around?</div>
-          <div className="champs__stat">
-            <span className="champs__midchip">{nonFamousPct}% non-famous</span> under
-            this lens (share of communities that are led by an account with under 50k
-            followers).
-          </div>
+          <div className="champs__desc">{blurb}</div>
           <div className="champs__controls">
             <div className="champs__toggle" role="tablist" aria-label="Ranking lens">
               {data.metrics.map((m) => (
@@ -184,17 +180,23 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
             )}
           </div>
         </div>
-        <ul className="champs__legend">
-          {(["upper", "middle", "lower"] as ChampClass[]).map((k) => (
-            <li key={k}>
-              <span className="champs__sw" style={{ background: CLASS_COLOR[k] }} />
-              {CLASS_LABEL[k]}
-            </li>
-          ))}
-        </ul>
+        <div className="champs__aside">
+          <div className="champs__stat">
+            <span className="champs__midchip">{nonFamousPct}% non-famous</span> under this lens
+          </div>
+          <ul className="champs__legend">
+            {(["upper", "middle", "lower"] as ChampClass[]).map((k) => (
+              <li key={k}>
+                <span className="champs__sw" style={{ background: CLASS_COLOR[k] }} />
+                {CLASS_LABEL[k]}
+              </li>
+            ))}
+          </ul>
+          <div className="champs__classnote">
+            Famous = 50k+ followers · niche = under 2k (middle’s in between)
+          </div>
+        </div>
       </div>
-
-      <div className="champs__caption">{blurb}</div>
 
       <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
         {layout === "topic"

@@ -662,7 +662,7 @@ body {
   margin: calc(6% + 104px) 5% 12px; /* extra gap below the title switcher */
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 24px;
   flex-wrap: wrap;
 }
@@ -672,19 +672,28 @@ body {
   font-weight: 700;
   color: #e6edf3;
 }
-.champs__tech {
-  margin-top: 4px;
+/* metric description, directly under the title */
+.champs__desc {
+  margin-top: 5px;
   font-size: 12.5px;
+  line-height: 1.35;
   color: var(--muted);
   max-width: 760px;
 }
-.champs__tech em { font-style: normal; color: #cdd9e6; }
+/* right column: the non-famous stat, the class legend, then the threshold note */
+.champs__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  text-align: right;
+}
 .champs__stat {
-  margin-top: 18px; /* breathe between the technical note and the headline stat */
   font-size: 14px;
   color: var(--muted);
-  white-space: nowrap; /* keep it on one line */
+  white-space: nowrap;
 }
+.champs__classnote { font-size: 11px; color: var(--muted); }
 /* Interlinks with the middle-class cells in the tree: same blue fill + left bar,
    white text. */
 .champs__midchip {
@@ -741,14 +750,6 @@ body {
 .champs__legend li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .champs__sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 
-.champs__caption {
-  flex: 0 0 auto;
-  padding: 0 5% 8px;
-  font-size: 12px;
-  line-height: 1.3;
-  color: var(--muted);
-}
-.champs__caption b { color: #cdd9e6; font-weight: 600; }
 .champs__tree {
   flex: 1 1 auto;
   min-height: 0;
@@ -1055,8 +1056,10 @@ body {
   /* Champions view: narrower topic labels + smaller text for the phone. */
   .champs__head { margin: calc(6% + 58px) 4% 8px; gap: 12px; }
   .champs__title { font-size: 15px; }
-  .champs__tech { font-size: 11.5px; }
+  .champs__desc { font-size: 11.5px; }
   .champs__stat { white-space: normal; }
+  /* aside stacks under the intro on the phone -> left-align it */
+  .champs__aside { align-items: flex-start; text-align: left; }
   /* Don't compress the cells into unreadable @handles. Instead the WHOLE tree
      scrolls horizontally as ONE element (rows stay in sync); the topic titles
      stick to the left so they're always visible. Flush the tree to the screen's
