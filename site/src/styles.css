@@ -1149,10 +1149,15 @@ body {
   }
   .champs__tree--flat .champrow__size { display: none; }
 
-  /* Plots on phones: keep the TEXT (title/desc) at its normal gutter, but let the
-     plot image bleed toward the screen edges -- the stage breaks out of the side
-     padding a touch (there's room). */
-  .plotpage__stage { margin-left: -14px; margin-right: -14px; }
+  /* Plots on phones: bleed the plot toward the screen edges, and sit it at the
+     TOP-left (just under the search overlay) instead of vertically centered, so
+     square plots use the full width and run down as far as they need. */
+  .plotpage__stage {
+    margin-left: -14px;
+    margin-right: -14px;
+    align-items: flex-start;   /* top, not vertically centered */
+    padding-top: 70px;         /* clear the floating search box */
+  }
   /* Narrow the handle search (~65% of before) so the "ranks by mainstreaminess"
      note beside it isn't pushed off-screen. (Follows box sets its own width.) */
   .plotpage__search { width: 165px; max-width: 46%; }

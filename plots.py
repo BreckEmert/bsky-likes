@@ -93,11 +93,14 @@ import export_web as ew
 PROJECT_DIR = config.PROJECT_DIR
 PLOTS_DIR   = config.PLOTS_DIR
 
-# Consistent canvas for EVERY web-exported plot, so they all frame identically and
-# fill the site's wide plot stage instead of letterboxing at assorted aspects
-# (was 9x7, 11x6.5, 10x9, 7x7, 12x7.5, 11x4.81...). ~2.2:1 matches the stage; the
-# overlay stays aligned because export_web recomputes bounds from the axes.
+# Two canvases. WIDE (~2.2:1) for plots whose DATA is wide (line plots, the
+# heatmap, and activity's 6-decade-x vs 3-decade-y). SQUARE (~1.15:1) for the
+# equal-aspect plots whose data box is ~square (typical-popularity, like-repost,
+# punching, long-tail) -- forcing those into the wide canvas baked huge side
+# whitespace around the set_aspect('equal') box, making the chart tiny (esp. on
+# mobile). Overlay stays aligned either way (export_web recomputes bounds).
 WEB_FIGSIZE = (12.5, 5.7)
+SQUARE_FIG  = (7.5, 6.5)
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Visual style — clean modern look that screenshots well on Bluesky
@@ -250,7 +253,7 @@ sub = (per_liker
        .select(["median_post_likes", "mean_post_likes"])
        .to_pandas())
 
-fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
+fig, ax = plt.subplots(figsize=SQUARE_FIG)
 hb = ax.hexbin(sub["median_post_likes"] + 1,
                sub["mean_post_likes"] + 1,
                gridsize=60, xscale="log", yscale="log",
@@ -391,7 +394,7 @@ xx = author_eng["avg_likes"].to_numpy()
 yy = author_eng["avg_reposts"].to_numpy()
 print(f"  authors with >=5 posts and avg >=1 of each: {len(xx):,}")
 
-fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
+fig, ax = plt.subplots(figsize=SQUARE_FIG)
 hb = ax.hexbin(xx, yy, gridsize=80, xscale="log", yscale="log",
                cmap="inferno", mincnt=1, norm=LogNorm())
 cb = fig.colorbar(hb, ax=ax, label="authors per hex (log)")
@@ -690,7 +693,7 @@ author_df = author_df_full
 # for the HEXBIN (they'd sit off-screen below/left of the mins anyway). No +1.
 _pos = author_df[(author_df["followers_count"] > 0) & (author_df["likes_per_post"] > 0)]
 
-fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
+fig, ax = plt.subplots(figsize=SQUARE_FIG)
 hb = ax.hexbin(
     _pos["followers_count"],               # raw, no +1
     _pos["likes_per_post"],
@@ -817,7 +820,7 @@ def lorenz_powerlaw(p, gini):
     a = (1 + gini) / (1 - gini)
     return p ** a
 
-fig, ax = plt.subplots(figsize=WEB_FIGSIZE)
+fig, ax = plt.subplots(figsize=SQUARE_FIG)
 ax.plot([0, 1], [0, 1], "--", color="#9aa4b1", alpha=0.5, label="perfect equality")
 ax.plot(p, lorenz_powerlaw(p, 0.48), color="#10b981", linewidth=2,
         label="US income (Gini ≈ 0.48)")
