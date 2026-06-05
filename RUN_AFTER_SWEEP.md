@@ -25,8 +25,10 @@ $env:USE_SWEEP=1; python export_champions.py; Remove-Item Env:\USE_SWEEP
 
 ## 2. Sanity-check
 
-- `@markhamillofficial` should still be in ~1 community (not 15 — that was the
-  dropped like-rate lens).
+- `@markhamillofficial` should be in ~1 community under Loyalty/Devotion/
+  Distinctiveness. He WILL top many communities under **Like-rate** — that's
+  expected (like-rate is famous-skewed; we kept it knowingly). Watch whether the
+  uncapped data makes it less absurd; if not, redefine or drop like-rate.
 - Spot-check Atproto Tinkerers / SFF Bookworms look reasonable.
 
 ## 3. Commit + push (redeploys automatically)

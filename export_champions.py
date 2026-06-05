@@ -60,13 +60,11 @@ METRICS = [
     {"id": "distinct", "label": "Distinctiveness", "rank": "lift",
      "blurb": "Accounts this community likes at a far higher rate than the rest of "
               "Bluesky does (highest lift)."},
-    # Like-rate DROPPED: likes/post divides by a sampled post count, so rare-but-
-    # viral posters (e.g. @markhamillofficial -> 15 communities) sweep it. The
-    # metric is unfixable with this data; the likeRate column is still computed
-    # below if we ever want to revisit it. Re-add this entry to bring the lens back.
-    # {"id": "likerate", "label": "Like-rate", "rank": "likeRate",
-    #  "blurb": "Accounts with the highest average likes per post from this community "
-    #           "(must have more posts than the median account)."},
+    # Like-rate is famous-skewed (rare-but-viral posters like @markhamillofficial
+    # top many communities) -- kept by choice; re-evaluate on the uncapped sweep data.
+    {"id": "likerate", "label": "Like-rate", "rank": "likeRate",
+     "blurb": "Accounts with the highest average likes per post from this community "
+              "(must have more posts than the median account)."},
 ]
 
 t0 = time.time()
