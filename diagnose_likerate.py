@@ -28,7 +28,7 @@ users = pl.read_parquet(
 
 posts = pl.scan_parquet(str(config.POSTS_PATH))
 likes = pl.scan_parquet(str(config.LIKES_DIR / "part-*.parquet")).select(
-    ["liker_did", "post_uri"]
+    ["liker_did", "post_uri", "like_created_at"]
 )
 
 # per author: how many of their posts are in OUR table + their total like_count there
@@ -120,3 +120,40 @@ alt = sub_authors.filter(pl.col("global_likes_here") >= 200)
 print(alt.sort("community_share", descending=True)
       .select(["handle", "community_share", "tl", "global_likes_here", "followers_count"])
       .head(10).to_pandas().to_string())
+
+# %% TEMPORAL: is the rate dragged down by posts OLDER than the like-pull window? --
+# Our likes only span a few months; posts older than that lost most of their likes
+# before we started pulling, so their windowed like-rate is artificially ~0.
+HANDLE = "gracekind.net"  # change to any account
+
+win = (
+    likes.select(pl.col("like_created_at").min().alias("mn"),
+                 pl.col("like_created_at").max().alias("mx"))
+    .collect(engine="streaming")
+)
+print(f"\nLIKE pull window: {win['mn'][0]}  ->  {win['mx'][0]}")
+
+did = users.filter(pl.col("handle") == HANDLE)["did"][0]
+gp = (posts.filter(pl.col("post_author_did") == did)
+      .select(["post_uri", "post_created_at", "like_count"]).collect(engine="streaming"))
+clk = (
+    likes.join(cmap.lazy(), on="liker_did", how="inner")
+    .join(posts.filter(pl.col("post_author_did") == did).select("post_uri"), on="post_uri", how="inner")
+    .group_by("post_uri").agg(pl.len().alias("comm_likes")).collect(engine="streaming")
+)
+g = (gp.join(clk, on="post_uri", how="left").with_columns(pl.col("comm_likes").fill_null(0))
+     .with_columns(pl.col("post_created_at").dt.truncate("1mo").alias("mo")))
+by_mo = (g.group_by("mo").agg(
+    pl.len().alias("posts"),
+    pl.col("like_count").mean().alias("lifetime_per_post"),
+    pl.col("comm_likes").mean().alias("windowed_per_post"),
+).sort("mo").to_pandas())
+print(by_mo.to_string())
+
+fig, ax = plt.subplots()
+ax.plot(by_mo["mo"], by_mo["lifetime_per_post"], "o-", label="lifetime likes/post")
+ax.plot(by_mo["mo"], by_mo["windowed_per_post"], "s-", label="our-window community likes/post")
+ax.axvspan(win["mn"][0], win["mx"][0], alpha=0.12, color="g", label="like-pull window")
+ax.set_xlabel("post creation month"); ax.set_ylabel("avg likes / post")
+ax.set_title(f"@{HANDLE}: old posts read ~0 in our window (likes predate the pull)")
+ax.legend(); fig.autofmt_xdate(); plt.tight_layout(); plt.show()
