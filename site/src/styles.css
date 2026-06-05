@@ -671,14 +671,21 @@ body {
   padding: 1px 6px;
   border-radius: 5px;
 }
-.champs__head {
-  /* cap the interface at a regular-monitor width and center it, so it doesn't
-     stretch across an ultrawide. 5% gutter becomes padding inside the cap. */
-  margin: calc(6% + 104px) auto 12px; /* extra gap below the title switcher */
+/* One column owns the cap + gutter; head, note, and tree all live inside it, so
+   the search bar, the note, and the table share identical left/right edges. */
+.champs__inner {
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   max-width: var(--champs-maxw);
+  margin: calc(6% + 104px) auto 0; /* clear the title switcher; center the cap */
   padding: 0 5%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+.champs__head {
+  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -771,33 +778,19 @@ body {
 .champs__legend li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .champs__sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 
-/* table-top bar: per-community note (left) + class-threshold note (right), on
-   one line flush with the top of the table, capped to the same width. */
-.champs__tablebar {
-  flex: 0 0 auto;
-  width: 100%;
-  max-width: var(--champs-maxw);
-  margin: 0 auto;
-  padding: 0 5% 8px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 16px;
-}
+/* per-community note: its own line just above the table, sharing the inner gutter */
 .champs__note {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
   font-size: 13px;
   color: var(--muted);
 }
+.champs__note--mobile { display: none; } /* swapped in on phones */
 .champs__tree {
   flex: 1 1 auto;
   min-height: 0;
-  width: 100%;
-  max-width: var(--champs-maxw);
-  margin: 0 auto;
   overflow-y: auto;
-  padding: 0 5% 16px;
-  box-sizing: border-box;
+  padding-bottom: 16px;
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -1111,18 +1104,21 @@ body {
   }
 
   /* Champions view: narrower topic labels + smaller text for the phone. */
-  .champs__head { margin: calc(6% + 58px) 4% 8px; gap: 12px; }
+  .champs__inner { margin-top: calc(6% + 58px); padding: 0 4%; }
+  .champs__head { margin-bottom: 8px; gap: 12px; }
   .champs__title { font-size: 15px; }
   .champs__desc { font-size: 11.5px; }
   .champs__stat { white-space: normal; }
-  /* aside stacks under the intro on the phone -> left-align it */
+  /* aside stacks under the intro on the phone -> left-align it (incl. the note) */
   .champs__aside { align-items: flex-start; text-align: left; }
-  /* Don't compress the cells into unreadable @handles. Instead the WHOLE tree
-     scrolls horizontally as ONE element (rows stay in sync); the topic titles
-     stick to the left so they're always visible. Flush the tree to the screen's
-     left edge so the sticky title's background covers all the way out -- no
-     cells peeking past the left of the title as you scroll. */
-  .champs__tree { overflow-x: auto; padding-left: 0; padding-right: 8px; }
+  .champs__classnote { text-align: left; white-space: normal; }
+  .champs__paren { display: none; }          /* drop "(famous)" etc. on phones */
+  .champs__note--full { display: none; }
+  .champs__note--mobile { display: inline; }
+  /* Every row scrolls horizontally with the SAME width (cells share one fixed
+     width, sized proportionally within it, like desktop); the topic title sticks
+     to the left so it's always visible. */
+  .champs__tree { overflow-x: auto; }
   .champrow { width: max-content; }
   .champrow__topic {
     flex: 0 0 100px;
@@ -1134,13 +1130,8 @@ body {
     padding: 0 6px;
     box-shadow: 4px 0 8px -2px #0a0d12; /* clean edge as cells scroll under */
   }
-  .champrow__cells { gap: 4px; }
-  .champcell {
-    flex: 0 0 auto;
-    min-width: 150px;
-    font-size: 12px;
-    padding: 5px 8px;
-  }
+  .champrow__cells { flex: 0 0 var(--champs-mobile-cellw, 560px); gap: 4px; }
+  .champcell { font-size: 12px; padding: 5px 8px; }
   /* per-community view: same horizontal-scroll behavior as by-topic, but the
      sticky title column is a touch wider since the community name leads.
      Force left-align (incl. the inherited text-align) so 1- and 2-line names

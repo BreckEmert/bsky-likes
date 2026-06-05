@@ -51,6 +51,7 @@ interface VS {
 // -- a smooth ramp across the whole range, no single "everything appears" jump.
 const LOD_BASE = 20000;   // overview ~= one point per occupied cell (even)
 const ZOOM_SPAN = 6;      // max zoom == fit + ZOOM_SPAN (keep in sync below)
+const MIN_ZOOM_PCT = 18;  // floor the zoom-out here (was the fit, 0%); too far out
 const LOD_FULL_PCT = 63;  // zoom % at which the full point set is shown
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 // MONOTONIC label LOD: precompute, per label, the zoom at which it first stops
@@ -117,6 +118,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const [colorMode, setColorMode] = useState<"continuum" | "topics">("topics");
   const initialZoom = useRef(0);
+  const minZoomRef = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
 
   // Fit the whole field once data + container size are known.
@@ -125,10 +127,14 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     const { xMin, xMax, yMin, yMax } = data.bounds;
     const z =
       Math.log2(Math.min(size.width / (xMax - xMin), size.height / (yMax - yMin))) - 0.2;
-    initialZoom.current = z;
-    // Cap zoom so users can't get lost: no zoom-out past the fit; bounded in.
-    setZoomRange({ min: z, max: z + ZOOM_SPAN });
-    const init: VS = { target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: z };
+    initialZoom.current = z; // detail (LOD/labels) stays anchored to the fit = 0%
+    // Floor the zoom-OUT at MIN_ZOOM_PCT (the fit was too far out) and cap zoom-in
+    // at the full span. Detail percentages still measure from the fit, so the
+    // most-zoomed-out view looks exactly like today's 18%.
+    const minZoom = z + (MIN_ZOOM_PCT / 100) * ZOOM_SPAN;
+    minZoomRef.current = minZoom;
+    setZoomRange({ min: minZoom, max: z + ZOOM_SPAN });
+    const init: VS = { target: [(xMin + xMax) / 2, (yMin + yMax) / 2, 0], zoom: minZoom };
     viewStateRef.current = init;
     setViewState(init);
     // Arm the framing effect now that the map is ready -- otherwise its "skip the
@@ -216,7 +222,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     } else {
       dest = savedViewRef.current ?? {
         target: [(b.xMin + b.xMax) / 2, (b.yMin + b.yMax) / 2, 0],
-        zoom: initialZoom.current,
+        zoom: minZoomRef.current,
       };
     }
     flyingRef.current = true;

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useChampions,
   CLASS_COLOR,
   CLASS_LABEL,
+  CLASS_PAREN,
   type ChampClass,
   type Champion,
 } from "../lib/useChampions.ts";
@@ -61,6 +62,22 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
   const [hover, setHover] = useState<{ c: Champion; x: number; y: number } | null>(null);
   const [metric, setMetric] = useState<string | null>(null);
   const [layout, setLayout] = useState<"topic" | "community">("topic");
+  // Pre-render the OTHER layout's tree (hidden) once the page is idle, so the
+  // first switch between By topic / By community is instant instead of building
+  // ~300 cells on click. Off until after first paint so it never slows the
+  // initial By-topic render.
+  const [warm, setWarm] = useState(false);
+  useEffect(() => {
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void) => number })
+      .requestIdleCallback;
+    const id = ric ? ric(() => setWarm(true)) : window.setTimeout(() => setWarm(true), 300);
+    return () => {
+      const cic = (window as unknown as { cancelIdleCallback?: (h: number) => void })
+        .cancelIdleCallback;
+      if (ric && cic) cic(id as number);
+      else clearTimeout(id as number);
+    };
+  }, []);
   // user-search floats the searched user's community/topic to the top. Uses the
   // GLOBAL selectedHandle so a search done on the cluster map carries over here
   // (and vice-versa). handles.bin is already cached from the map, so this is cheap.
@@ -138,6 +155,11 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
     <div className="champs">
       <MapTitleSwitch view={view} onSwitch={onSwitch} />
 
+      {/* one inner column owns the max-width + gutter, so EVERYTHING inside
+          (title/desc/controls/search on the left, stat/legend/note on the right,
+          the per-community note, and the tree) shares the exact same left/right
+          edges. No per-element max-width/padding to drift out of sync. */}
+      <div className="champs__inner">
       <div className="champs__head">
         <div className="champs__intro">
           <div className="champs__title">Who does each community rally around?</div>
@@ -200,31 +222,26 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
               <li key={k}>
                 <span className="champs__sw" style={{ background: CLASS_COLOR[k] }} />
                 {CLASS_LABEL[k]}
+                <span className="champs__paren">&nbsp;({CLASS_PAREN[k]})</span>
               </li>
             ))}
           </ul>
+          <div className="champs__classnote">Famous = 50k+ followers · niche = under 2k</div>
         </div>
       </div>
 
-      {/* table-top bar: the per-community note (left, by-topic only) and the
-          class-threshold note (right) sit on the SAME line, flush with the top
-          of the table. */}
-      <div className="champs__tablebar">
-        {layout === "topic" ? (
-          <div className="champs__note">
+      {layout === "topic" && (
+        <div className="champs__note">
+          <span className="champs__note--full">
             Max 1 champion per community (a community ≈ {medianSize.toLocaleString()} users).
-          </div>
-        ) : (
-          <span />
-        )}
-        <div className="champs__classnote">
-          Famous = 50k+ followers · niche = under 2k
+          </span>
+          <span className="champs__note--mobile">Max 1 champ per community (~4,400 users).</span>
         </div>
-      </div>
+      )}
 
-      <div className={"champs__tree" + (layout === "community" ? " champs__tree--flat" : "")}>
-        {layout === "topic"
-          ? orderedTopics.map((t) => {
+      {(layout === "topic" || warm) && (
+        <div className="champs__tree" style={{ display: layout === "topic" ? undefined : "none" }}>
+          {orderedTopics.map((t) => {
               const sum = t.champions.reduce((s, c) => s + c.subSize, 0) || 1;
               // widest bar (biggest community) first, left-to-right
               const cells = [...t.champions].sort((a, b) => b.subSize - a.subSize);
@@ -265,8 +282,12 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                   </div>
                 </div>
               );
-            })
-          : orderedCommunities.map((co) => {
+            })}
+        </div>
+      )}
+      {(layout === "community" || warm) && (
+        <div className="champs__tree champs__tree--flat" style={{ display: layout === "community" ? undefined : "none" }}>
+          {orderedCommunities.map((co) => {
               // by-community bar ∝ the active lens's ranking value, so the order is visible
               const vsum = co.champions.reduce((s, ch) => s + ch.value, 0) || 1;
               return (
@@ -307,6 +328,8 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                 </div>
               );
             })}
+        </div>
+      )}
       </div>
 
       {hover && (

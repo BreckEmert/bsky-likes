@@ -39,9 +39,9 @@ const RAW_PLOTS: PlotConfig[] = [
   {
     id: "typical-popularity",
     tabLabel: "Typical Popularity",
-    title: "What's the typical popularity of posts you like?",
+    title: "What's the typical popularity of posts we like?",
     subtitle:
-      "Higher y = a few things you've liked blew up\nBottom-left = you've literally liked nothing popular",
+      "Higher = a few things we liked blew up\nBottom-left = we've liked nothing popular",
     image: "/plots/typical-popularity.png",
     bounds: "/plots/typical-popularity.bounds.json",
     searchable: true,
@@ -72,7 +72,7 @@ const RAW_PLOTS: PlotConfig[] = [
   {
     id: "like-repost",
     tabLabel: "Like/Repost Ratio",
-    title: "Your like-to-repost ratios",
+    title: "Our like-to-repost ratios",
     subtitle: "upper-left posts are reposted but not liked",
     image: "/plots/like-repost.png",
     bounds: "/plots/like-repost.bounds.json",

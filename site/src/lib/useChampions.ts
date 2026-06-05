@@ -78,7 +78,13 @@ export const CLASS_COLOR: Record<ChampClass, string> = {
   lower: "#34d399", // tiny but devoted — green
 };
 export const CLASS_LABEL: Record<ChampClass, string> = {
-  upper: "Upper class (famous)",
-  middle: "Middle class (workhorses)",
-  lower: "Lower class (niche)",
+  upper: "Upper class",
+  middle: "Middle class",
+  lower: "Lower class",
+};
+// the parenthetical gloss, shown after the label on desktop and hidden on mobile
+export const CLASS_PAREN: Record<ChampClass, string> = {
+  upper: "famous",
+  middle: "workhorses",
+  lower: "niche",
 };
