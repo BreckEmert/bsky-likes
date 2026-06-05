@@ -260,13 +260,14 @@ async def run_initial(client, user_dids, state, state_path, cutoff,
                       f"rate: {rate:.1f} users/s  "
                       f"eta: {eta_sec/3600:.1f}h")
 
-            # Flush shards often (cheap), but SAVE STATE rarely. save_state
-            # re-serializes the whole (growing) done_users set, which blocks the
-            # event loop -- doing it on every shard flush is what drags the rate
-            # down as the set grows. Decouple: shards on the buffer, state on
-            # CHECKPOINT_EVERY users only. (Cost: a crash re-pulls up to
-            # CHECKPOINT_EVERY users -> a few dedupable dup likes. Fine for a sweep.)
-            if len(buffer) >= 50_000:
+            # SAVE STATE rarely (it re-serializes the whole growing done_users
+            # set, which blocks the event loop and drags the rate down as the set
+            # grows). The buffer is a MEMORY GUARD, not the primary flush trigger:
+            # at ~1k likes/user in the sweep, 500k likes ~= 500 users, so in
+            # practice shards land on the CHECKPOINT_EVERY cadence (~every 500
+            # users) -- ~10x fewer/bigger parquet writes than the old 50k buffer.
+            # Raise/lower this to trade memory for write frequency.
+            if len(buffer) >= 500_000:
                 flush_likes(buffer, shard_idx, out_dir)
                 shard_idx += 1
                 state["shard_idx"] = shard_idx
