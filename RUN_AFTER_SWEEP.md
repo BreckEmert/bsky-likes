@@ -23,6 +23,15 @@ $env:USE_SWEEP=1; python export_champions.py; Remove-Item Env:\USE_SWEEP
   shorter sweep window), lower `FAN_MIN_LIKES` in `export_champions.py` (try 10,
   then 8) and re-run until it's 49/49 again.
 
+### 1b. Refresh the champion profile pictures
+
+The champion set changes with the new data, so re-fetch avatars:
+```bash
+python export_champion_avatars.py
+```
+Adds a fresh `avatars` map (handle -> CDN url) to champions.json via the public
+AppView. ~15 batched calls; prints how many of the champions got an avatar.
+
 ## 2. Sanity-check
 
 - `@markhamillofficial` should be in ~1 community under Loyalty/Devotion/

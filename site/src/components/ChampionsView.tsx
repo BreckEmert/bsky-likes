@@ -244,8 +244,13 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                         onMouseLeave={() => setHover(null)}
                         onClick={() => onSelectHandle(c.handle)}
                       >
-                        {c.subName && <span className="champcell__sub">{c.subName}</span>}
-                        <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
+                        {data.avatars?.[c.handle] && (
+                          <img className="champcell__pfp" src={data.avatars[c.handle]} alt="" loading="lazy" />
+                        )}
+                        <span className="champcell__txt">
+                          {c.subName && <span className="champcell__sub">{c.subName}</span>}
+                          <span className="champcell__h">@{c.handle.replace(/\.bsky\.social$/, "")}</span>
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -279,7 +284,12 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                         onMouseLeave={() => setHover(null)}
                         onClick={() => onSelectHandle(ch.handle)}
                       >
-                        <span className="champcell__h">@{ch.handle.replace(/\.bsky\.social$/, "")}</span>
+                        {data.avatars?.[ch.handle] && (
+                          <img className="champcell__pfp" src={data.avatars[ch.handle]} alt="" loading="lazy" />
+                        )}
+                        <span className="champcell__txt">
+                          <span className="champcell__h">@{ch.handle.replace(/\.bsky\.social$/, "")}</span>
+                        </span>
                       </button>
                     ))}
                   </div>

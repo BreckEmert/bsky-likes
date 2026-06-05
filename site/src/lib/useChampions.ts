@@ -51,6 +51,7 @@ export interface ChampionsData {
   fanMinLikes: number;
   metrics: MetricMeta[];
   variants: Record<string, Variant>;
+  avatars?: Record<string, string>; // handle -> profile-picture URL
 }
 
 /** Load champions.json (produced by export_champions.py) for the champions tab. */

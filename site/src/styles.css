@@ -815,10 +815,9 @@ body {
   flex-basis: 0;
   min-width: 0;
   display: flex;
-  flex-direction: column; /* sub-community name over the @handle */
-  justify-content: center;
-  align-items: flex-start;
-  gap: 1px;
+  flex-direction: row; /* avatar + (sub-community name over the @handle) */
+  align-items: center;
+  gap: 6px;
   padding: 4px 8px;
   border: 1px solid transparent;
   border-left-width: 3px;
@@ -831,6 +830,19 @@ body {
   transition: background 0.15s ease;
 }
 .champcell:hover { background: rgba(255, 255, 255, 0.1); }
+.champcell__pfp {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.08);
+}
+.champcell__txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* let the sub/handle ellipsis */
+}
 .champcell__sub {
   max-width: 100%;
   overflow: hidden;
