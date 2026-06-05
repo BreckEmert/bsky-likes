@@ -42,7 +42,7 @@ SUPERFAN_FLOOR = 10       # loyalty/devotion: need >= this many superfans here t
 #                           (kills "3 of 3 superfans" share flukes; 10 keeps full coverage)
 DISTINCT_FLOOR = 0.10     # distinctiveness: account must be liked by >= 10% of the community
 LIKERATE_MIN_FANS = 30    # like-rate: need >= this many (any) likers here to qualify
-TOP_K = 3                 # "by community" view: top-K per sub
+TOP_K = 6                 # "by community" view: top-K per sub
 UPPER_FOLLOWERS = 50_000  # >= this -> upper class
 LOWER_FOLLOWERS = 2_000   # < this  -> lower class (middle is in between)
 ROOT = Path(__file__).parent
@@ -186,7 +186,8 @@ def champ_dict(r):
 
 def build_variant(rank, floor):
     """champion-per-sub (by-topic) + top-K-per-sub (by-community) under one lens."""
-    dd = d.filter(floor)
+    dq = d.with_columns(floor.alias("_q"))   # _q = clears this lens's quality floor
+    dd = dq.filter(pl.col("_q"))             # by-topic champions must clear the floor
 
     # ---- by-topic: each sub's #1, grouped under its tier-1 topic ----
     champ = dd.sort(rank, descending=True).unique("sub", keep="first")
@@ -218,8 +219,12 @@ def build_variant(rank, floor):
                 deduped.append(c)
         t["champions"] = deduped
 
-    # ---- by-community: each sub's top-K ----
-    topk = dd.sort(rank, descending=True).group_by("sub").head(TOP_K)
+    # ---- by-community: each sub's top-K, preferring floor-qualified accounts and
+    #      backfilling with the next-best so every community shows a full TOP_K ----
+    topk = (
+        dq.sort([pl.col("_q"), pl.col(rank)], descending=[True, True])
+        .group_by("sub").head(TOP_K)
+    )
     communities = {}
     for r in topk.sort(rank, descending=True).to_dicts():
         sid = int(r["sub"])
