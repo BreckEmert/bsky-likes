@@ -86,7 +86,7 @@ const RAW_PLOTS: PlotConfig[] = [
   },
   {
     id: "leaderboards",
-    tabLabel: "Most & Least",
+    tabLabel: "Popularity Rankings",
     title: "Who likes the most (and least) popular posts?",
     subtitle:
       "bar length = the average popularity of the posts they like (log of like-count)",
@@ -173,10 +173,28 @@ const RAW_PLOTS: PlotConfig[] = [
   },
 ];
 
+// Tab order, independent of the authoring order above. Kept explicit so the
+// reading flow (popularity -> ratios -> timing -> reach -> inequality) is easy
+// to re-tune without moving big config blocks around.
+const PLOT_ORDER = [
+  "typical-popularity",
+  "popularity-curve",
+  "leaderboards",
+  "like-repost",
+  "half-life",
+  "punching",
+  "wakes-up",
+  "long-tail",
+  "activity",
+];
+const ORDERED = PLOT_ORDER.map(
+  (id) => RAW_PLOTS.find((p) => p.id === id)!
+).filter(Boolean);
+
 // Resolve every asset URL (image / bounds / data.*) against the deploy base, so
 // the site works at the domain root OR a sub-path. Authoring above stays as
 // clean "/plots/..." paths.
-export const PLOTS: PlotConfig[] = RAW_PLOTS.map((p) => ({
+export const PLOTS: PlotConfig[] = ORDERED.map((p) => ({
   ...p,
   image: p.image ? asset(p.image) : p.image,
   bounds: p.bounds ? asset(p.bounds) : p.bounds,

@@ -260,6 +260,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   // reads better than the crossfade). Tier 1 (broad) on the overview; tier 2
   // (finer sub-topics) once you've zoomed past the threshold.
   const TIER_SWAP_PCT = 36;
+  // How far each label's topic color is pulled toward white. ~0.82 = mostly
+  // white with a soft, recognizable hue.
+  const LABEL_WHITE = 0.82;
   const tier1Opacity = zoomPct < TIER_SWAP_PCT ? 1 : 0;
   const tier2Opacity = zoomPct >= TIER_SWAP_PCT ? 1 : 0;
   // Glow edge: the single faint disc has a hard circular boundary that reads
@@ -383,7 +386,20 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           getText: (r: Region) => r.name,
           getSize: (r: Region) => clamp(sizeBase + 3 * Math.log10(r.size), sizeBase, sizeBase + 12),
           sizeUnits: "pixels",
-          getColor: [240, 246, 252, 255],
+          // Tint each label with its own topic/dot color, but pulled most of the
+          // way to white (LABEL_WHITE) so the map reads as mostly-white text with
+          // a soft hue that matches the field underneath -- evens the whole thing
+          // out without hurting legibility over the dark halo.
+          getColor: (r: Region) => {
+            const c = r.color ?? [240, 246, 252];
+            const w = LABEL_WHITE;
+            return [
+              Math.round(c[0] * (1 - w) + 255 * w),
+              Math.round(c[1] * (1 - w) + 255 * w),
+              Math.round(c[2] * (1 - w) + 255 * w),
+              255,
+            ];
+          },
           fontFamily: '"DejaVu Sans", system-ui, sans-serif',
           fontWeight: 700,
           characterSet: "auto",

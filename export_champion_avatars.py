@@ -47,7 +47,12 @@ with httpx.Client(timeout=30, headers={"user-agent": "bsky-likes-avatars/0.1"}) 
             r = c.get(APPVIEW, params=[("actors", x) for x in batch])
             for p in r.json().get("profiles", []):
                 if p.get("avatar"):
-                    did2av[p["did"]] = p["avatar"]
+                    # getProfiles hands back the full-size avatar (~1000px). We
+                    # render it at 20px, so request the tiny thumbnail variant
+                    # instead — same CDN, a fraction of the bytes.
+                    did2av[p["did"]] = p["avatar"].replace(
+                        "/img/avatar/plain/", "/img/avatar_thumbnail/plain/"
+                    )
         except Exception as e:
             print("  batch failed:", e)
         time.sleep(0.1)
