@@ -190,6 +190,7 @@ body {
   flex-direction: column;
   min-height: 0;
   padding: 16px 20px 20px;
+  position: relative; /* anchors the top-right NotesPanel to the page (under the tabs) */
 }
 
 /* Consistent header height so the plot stage (and the PNG's axes box) lands at

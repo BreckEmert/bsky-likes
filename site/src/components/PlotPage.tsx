@@ -166,6 +166,10 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
         )}
       </header>
 
+      {/* Shared data-caveats panel + selected profile card, pinned to the plot
+          page's top-right (level with the tab row above), not down in the stage. */}
+      <NotesPanel handle={selectedHandle} />
+
       <div className="plotpage__stage" ref={stageRef}>
         {plot.searchable && (
           <div className="plotpage__search">
@@ -199,11 +203,6 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
             />
           </div>
         )}
-
-        {/* Shared data-caveats panel + the selected profile card, top-right.
-            (The follows plot syncs its entered user into the global selection, so
-            the same card shows there too.) */}
-        <NotesPanel handle={selectedHandle} />
 
         {plot.image ? (
           <img
