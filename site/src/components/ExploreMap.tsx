@@ -148,6 +148,14 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   const [notesOpen, setNotesOpen] = useState(
     () => typeof window === "undefined" || window.innerWidth > 1100
   );
+  // Open the notes while the cluster map is the focused view; collapse them once
+  // you drop into the plots (framing flips to "pretty"). Desktop only -- on
+  // narrow/mobile it stays the compact pill. The panel itself is a fixed overlay,
+  // unaffected by the map's pan/zoom/fly.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth <= 1100) return;
+    setNotesOpen(framing !== "pretty");
+  }, [framing]);
   const initialZoom = useRef(0);
   const minZoomRef = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
@@ -329,6 +337,25 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     1
   );
   const glowMul = dotPct + (1 - dotPct) * glowScale;
+
+  // Per-topic average CONTINUUM color. In Continuum mode the legend keys recolor to
+  // the gradient (each topic tinted by where its dots sit), so the same topic legend
+  // stays useful in both modes. Keyed by the topic's "r,g,b" color string.
+  const legendContinuum = useMemo(() => {
+    if (!data?.legend || !data.colorsTopic) return null;
+    const ct = data.colorsTopic, co = data.colors, n = data.n;
+    const acc = new Map<string, [number, number, number, number]>();
+    for (let i = 0; i < n; i++) {
+      const k = ct[3 * i] + "," + ct[3 * i + 1] + "," + ct[3 * i + 2];
+      let a = acc.get(k);
+      if (!a) { a = [0, 0, 0, 0]; acc.set(k, a); }
+      a[0] += co[3 * i]; a[1] += co[3 * i + 1]; a[2] += co[3 * i + 2]; a[3]++;
+    }
+    const out = new Map<string, [number, number, number]>();
+    for (const [k, a] of acc)
+      if (a[3]) out.set(k, [Math.round(a[0] / a[3]), Math.round(a[1] / a[3]), Math.round(a[2] / a[3])]);
+    return out;
+  }, [data]);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -583,8 +610,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           {notesOpen && (
             <ul className="mapnotes__list">
               <li>
-                Built from likes. Who likes whom. <strong>Not</strong> the content
-                of anyone's posts.
+                Each account is represented by <strong>who they like</strong>, not
+                from <strong>what that account itself posts</strong>.
               </li>
               <li>
                 Limited to <strong>my extended network</strong> (~221k accounts, two
@@ -624,7 +651,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
               className={colorMode === "topics" ? "is-on" : ""}
               onClick={() => setColorMode("topics")}
             >
-              Topics
+              Colorful
             </button>
             <button
               className={colorMode === "continuum" ? "is-on" : ""}
@@ -633,17 +660,24 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
               Continuum
             </button>
           </div>
-          {colorMode === "topics" && data.legend && (
+          {data.legend && (
             <ul className="cmode__legend">
-              {data.legend.map((t) => (
-                <li key={t.id}>
-                  <span
-                    className="cmode__swatch"
-                    style={{ background: `rgb(${t.color[0]},${t.color[1]},${t.color[2]})` }}
-                  />
-                  {t.name}
-                </li>
-              ))}
+              {data.legend.map((t) => {
+                const key = `${t.color[0]},${t.color[1]},${t.color[2]}`;
+                const c =
+                  colorMode === "continuum" && legendContinuum
+                    ? legendContinuum.get(key) ?? t.color
+                    : t.color;
+                return (
+                  <li key={t.id}>
+                    <span
+                      className="cmode__swatch"
+                      style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }}
+                    />
+                    {t.name}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
