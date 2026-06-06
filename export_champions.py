@@ -77,10 +77,17 @@ sub_topic = (
 print(f"{N:,} clustered users, {sub_sizes.height} sub-communities ({time.time()-t0:.0f}s)", flush=True)
 
 cmap = mem.select(["liker_did", "sub"])
-likes = pl.scan_parquet(str(LIKES_SOURCE / "part-*.parquet")).select(["liker_did", "post_uri"])
+# The author DID is embedded in every post_uri (at://<author_did>/app.bsky.feed.post/
+# <rkey>), so we PARSE it instead of joining to posts.parquet. This lets the board run
+# straight off the raw (uncapped sweep) likes WITHOUT enriching tens of millions of
+# posts: enrichment only adds like_count/created_at, and the board uses neither -- it
+# needs only post_uri -> author plus the superfan counts derived from the likes.
+likes = (pl.scan_parquet(str(LIKES_SOURCE / "part-*.parquet"))
+         .select(["liker_did", "post_uri"])
+         .with_columns(pl.col("post_uri").str.extract(r"^at://([^/]+)/", 1)
+                       .alias("post_author_did")))
 print(f"likes source: {LIKES_SOURCE.name}", flush=True)
-posts = pl.scan_parquet(str(config.POSTS_PATH)).select(["post_uri", "post_author_did"])
-base = likes.join(cmap.lazy(), on="liker_did", how="inner").join(posts, on="post_uri", how="inner")
+base = likes.join(cmap.lazy(), on="liker_did", how="inner")
 
 # per (sub, author): unique likers (any like) + total likes
 agg = (
@@ -95,8 +102,10 @@ sf = (
     .group_by(["sub", "post_author_did"]).agg(pl.len().alias("superfans"))
     .collect(engine="streaming")
 )
-# author post volume (for like-rate)
-npost = posts.group_by("post_author_did").agg(pl.len().alias("npost")).collect(engine="streaming")
+# author post volume (for like-rate): distinct liked posts per author, from the likes
+npost = (likes.select(["post_author_did", "post_uri"]).unique()
+         .group_by("post_author_did").agg(pl.len().alias("npost"))
+         .collect(engine="streaming"))
 print(f"aggregations done ({time.time()-t0:.0f}s)", flush=True)
 
 # --- assemble the master per-(sub, author) stats table ---
