@@ -1,8 +1,8 @@
 {
-  "xMin": -0.5,
-  "xMax": 23.5,
-  "yMin": 6.5,
-  "yMax": -0.5,
+  "xMin": 0.0,
+  "xMax": 24.0,
+  "yMin": 7.0,
+  "yMax": 0.0,
   "xLog": false,
   "yLog": false,
   "imgWidth": 2500,
