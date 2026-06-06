@@ -177,7 +177,9 @@ const RAW_PLOTS: PlotConfig[] = [
 // reading flow (popularity -> ratios -> timing -> reach -> inequality) is easy
 // to re-tune without moving big config blocks around.
 const PLOT_ORDER = [
-  // 3 like plots first ...
+  // crowd favorite leads ...
+  "activity", // "Followers vs Taste"
+  // ... 3 like plots ...
   "like-repost",
   "half-life",
   "punching",
@@ -188,7 +190,6 @@ const PLOT_ORDER = [
   // ... then the rest.
   "wakes-up",
   "long-tail",
-  "activity",
 ];
 const ORDERED = PLOT_ORDER.map(
   (id) => RAW_PLOTS.find((p) => p.id === id)!

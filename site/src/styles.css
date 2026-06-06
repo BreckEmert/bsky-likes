@@ -431,13 +431,73 @@ body {
   margin: 0 auto;
   box-sizing: border-box;
   height: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(10px, 2.2vw, 28px);
+  display: flex;
+  flex-direction: column;
   /* top padding clears the floating search box (top-left over the stage) */
   padding: 48px 4px 0;
   min-height: 0;
   position: relative;
+}
+/* the two ranked columns take the room above the axis footer */
+.listrows__cols {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(10px, 2.2vw, 28px);
+}
+/* footer: the searched-out-of-list band + a per-column x-axis */
+.listrows__foot { flex: 0 0 auto; padding-top: 8px; }
+.listrows__axes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(10px, 2.2vw, 28px);
+}
+/* x-axis under each column: bar length = value, labelled as exp(value) = the typical
+   like-count of the posts those users like. Left-padded to align with the bars. */
+.listaxis { padding: 0 8px 0 36px; }
+.listaxis__track { display: flex; align-items: center; height: 8px; }
+.listaxis__line { flex: 1 1 auto; height: 1.5px; opacity: 0.55; }
+.listaxis__tick { width: 1.5px; height: 7px; background: var(--muted); opacity: 0.6; }
+.listaxis__labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.listaxis__cap { font-size: 10px; opacity: 0.85; text-align: center; padding: 0 6px; }
+
+/* a searched user outside the top/bottom 50 -> where they actually fall, revealed
+   below the columns. */
+.listfound {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 12px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(236, 72, 153, 0.14);
+  border: 1px solid rgba(236, 72, 153, 0.5);
+  font-size: 13px;
+  animation: listfound-in 0.28s ease-out;
+}
+@keyframes listfound-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.listfound__h { color: #ec4899; font-weight: 700; }
+.listfound__rank { font-weight: 700; font-variant-numeric: tabular-nums; }
+.listfound__rank small { color: var(--muted); font-weight: 400; }
+.listfound__pct, .listfound__likes { color: var(--muted); }
+.listfound--none {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
 }
 /* On wide screens the board is capped (1000px) with slack, so pull it left by
    half the fixed left label to center it on the VIEWPORT, not just the stage. */
