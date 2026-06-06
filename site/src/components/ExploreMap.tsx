@@ -6,7 +6,7 @@ import { useExploreData } from "../lib/useExploreData.ts";
 import { useRegions, type Region } from "../lib/useRegions.ts";
 import { useElementSize } from "../lib/useElementSize.ts";
 import { SearchBox } from "./SearchBox.tsx";
-import { ProfileCard } from "./ProfileCard.tsx";
+import { NotesPanel } from "./NotesPanel.tsx";
 import { MapAtmosphere } from "./MapAtmosphere.tsx";
 import { MapTitleSwitch, type MapView } from "./MapTitleSwitch.tsx";
 import { asset } from "../lib/asset.ts";
@@ -142,28 +142,9 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   const fromDotRef = useRef(false); // true when the selection came from clicking a map dot
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const [colorMode, setColorMode] = useState<"continuum" | "topics">("topics");
-  // top-right "Limitations & Notes" -- expanded on wide screens, collapsed to a
-  // compact pill on narrower ones (<=1100px) where the centered title would
-  // otherwise slide under the open panel.
-  const [notesOpen, setNotesOpen] = useState(
-    () => typeof window === "undefined" || window.innerWidth > 1100
-  );
-  // Open the notes while the cluster map is the focused view; collapse them once
-  // you drop into the plots (framing flips to "pretty"). Desktop only -- on
-  // narrow/mobile it stays the compact pill. The panel itself is a fixed overlay,
-  // unaffected by the map's pan/zoom/fly.
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth <= 1100) return;
-    setNotesOpen(framing !== "pretty");
-  }, [framing]);
-  // The FIRST profile selection (none -> selected) collapses the notes to clear
-  // the top-right for the profile card; later selection changes don't.
-  const prevSelRef = useRef<string | null>(selectedHandle);
-  useEffect(() => {
-    const was = prevSelRef.current;
-    prevSelRef.current = selectedHandle;
-    if (!was && selectedHandle) setNotesOpen(false);
-  }, [selectedHandle]);
+  // The "Limitations & Notes" panel + profile card is now the shared <NotesPanel>,
+  // rendered below. On the map it starts open on wide screens (room to spare).
+  const notesStartOpen = typeof window === "undefined" || window.innerWidth > 1100;
   const initialZoom = useRef(0);
   const minZoomRef = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
@@ -624,57 +605,8 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       {/* Title / view switcher -- always visible so you can switch any time. */}
       {data && <MapTitleSwitch view={mapView} onSwitch={onSwitchView} />}
 
-      {/* Top-right stack: data caveats, then the selected profile card BELOW them
-          (so the card slides down/up as the notes expand/collapse). Clicking
-          anywhere in the notes toggles them. */}
-      {data && (
-        <div className="maptopright">
-          <div
-            className={"mapnotes" + (notesOpen ? " is-open" : "")}
-            role="button"
-            tabIndex={0}
-            aria-expanded={notesOpen}
-            onClick={() => setNotesOpen((v) => !v)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setNotesOpen((v) => !v);
-              }
-            }}
-          >
-            <div className="mapnotes__head">
-              <span>Limitations &amp; Notes</span>
-              <span className="mapnotes__chev">{notesOpen ? "–" : "+"}</span>
-            </div>
-            {notesOpen && (
-              <ul className="mapnotes__list">
-                <li>
-                  Each account is represented by <strong>who they like</strong>, not
-                  from <strong>what that account itself posts</strong>.
-                </li>
-                <li>
-                  Limited to <strong>my extended network</strong> (~221k accounts, two
-                  hops out), not all of Bluesky.
-                </li>
-                <li>
-                  <strong>English-language</strong> accounts only, it doesn't cluster
-                  as well otherwise.
-                </li>
-                <li>
-                  Data was collected over two separate pulls on different date windows.
-                  Counts may slightly differ if a popular post goes outside of those,
-                  sorry!
-                </li>
-                <li>
-                  Some viz drop low-signal accounts, e.g. the like/repost plot needs
-                  1+ repost per post and 5+ posts.
-                </li>
-              </ul>
-            )}
-          </div>
-          <ProfileCard handle={selectedHandle} />
-        </div>
-      )}
+      {/* Shared data-caveats panel + profile card, top-right. */}
+      {data && <NotesPanel handle={selectedHandle} startOpen={notesStartOpen} />}
 
       <div className="exploremap__search">
         <SearchBox

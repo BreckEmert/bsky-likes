@@ -17,7 +17,7 @@ import { SvgPoints, type HLPoint } from "./highlights/SvgPoints.tsx";
 import { SvgLine } from "./highlights/SvgLine.tsx";
 import { ListRows } from "./highlights/ListRows.tsx";
 import { FollowsHighlight, type FollowPicks } from "./FollowsHighlight.tsx";
-import { ProfileCard } from "./ProfileCard.tsx";
+import { NotesPanel } from "./NotesPanel.tsx";
 
 const FOLLOW_PINK = "#ec4899";
 const FOLLOW_USER = "#22d3ee"; // distinct-but-friendly cyan for the searched user
@@ -200,11 +200,10 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
           </div>
         )}
 
-        {/* Profile card for the selected handle. Only on searchable plots —
-            non-selectable plots (long-tail, wakes-up) shouldn't show it. The
-            follows plot shows the entered user's card instead. */}
-        {plot.searchable && <ProfileCard handle={selectedHandle} />}
-        {isFollows && followPicks.user && <ProfileCard handle={followPicks.user} />}
+        {/* Shared data-caveats panel + the selected profile card, top-right.
+            (The follows plot syncs its entered user into the global selection, so
+            the same card shows there too.) */}
+        <NotesPanel handle={selectedHandle} />
 
         {plot.image ? (
           <img

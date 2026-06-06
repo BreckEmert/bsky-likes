@@ -8,7 +8,7 @@ import {
   type Champion,
 } from "../lib/useChampions.ts";
 import { MapTitleSwitch, type MapView } from "./MapTitleSwitch.tsx";
-import { ProfileCard } from "./ProfileCard.tsx";
+import { NotesPanel } from "./NotesPanel.tsx";
 import { SearchBox } from "./SearchBox.tsx";
 import { useChampionMembers } from "../lib/useChampionMembers.ts";
 
@@ -346,7 +346,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
         </div>
       )}
 
-      <ProfileCard handle={selectedHandle} />
+      <NotesPanel handle={selectedHandle} />
     </div>
   );
 }
