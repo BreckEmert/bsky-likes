@@ -34,7 +34,7 @@ import polars as pl
 
 from bsky_likes import config, graph
 from bsky_likes import likes as likes_mod
-from bsky_likes.client import Client, resolve_handle
+from bsky_likes.client import Client, resolve_handle, parse_ts
 from bsky_likes.enrich import enrich_posts, enrich_users
 from bsky_likes.state import load_state, save_state
 
@@ -486,6 +486,148 @@ async def run_sweep_mode(args):
 
 
 # ============================================================================
+# MODE: authorfeed  (de-bias scan -- recover small accounts' 0-like posts)
+# ============================================================================
+_AUTHORFEED_SCHEMA = {
+    "author_did": pl.Utf8,
+    "post_uri": pl.Utf8,
+    "post_created_at": pl.Datetime(time_zone="UTC"),
+    "like_count": pl.Int64,
+    "repost_count": pl.Int64,
+}
+
+
+def _flush_authorfeed(rows, shard_idx, out_dir):
+    if not rows:
+        return
+    df = pl.DataFrame(rows, schema=_AUTHORFEED_SCHEMA)
+    out_path = out_dir / f"part-{shard_idx:05d}.parquet"
+    df.write_parquet(out_path, compression="zstd")
+    print(f"    -> flushed {len(rows):,} posts to {out_path.name} "
+          f"({out_path.stat().st_size / 1e6:.1f} MB)", flush=True)
+
+
+async def _fetch_authorfeed(client, did, sem, max_pages, cap):
+    """Up to `cap` of an account's own original posts (createdAt + like/repost
+    counts), including the zero-like ones that posts.parquet never captured."""
+    rows, cursor = [], None
+    async with sem:
+        for _ in range(max_pages):
+            params = {"actor": did, "limit": 100, "filter": "posts_no_replies"}
+            if cursor:
+                params["cursor"] = cursor
+            data = await client.get(
+                f"{config.APPVIEW}/xrpc/app.bsky.feed.getAuthorFeed", params=params)
+            if not data:
+                break
+            for item in data.get("feed", []):
+                if item.get("reason"):
+                    continue  # skip reposts (not their own post)
+                post = item.get("post") or {}
+                if (post.get("author") or {}).get("did") != did:
+                    continue
+                ts = parse_ts((post.get("record") or {}).get("createdAt", ""))
+                if ts is None:
+                    continue
+                rows.append({
+                    "author_did": did,
+                    "post_uri": post.get("uri"),
+                    "post_created_at": ts,
+                    "like_count": int(post.get("likeCount", 0) or 0),
+                    "repost_count": int(post.get("repostCount", 0) or 0),
+                })
+                if len(rows) >= cap:
+                    return rows
+            cursor = data.get("cursor")
+            if not cursor:
+                break
+    return rows
+
+
+async def run_authorfeed_mode(args):
+    """Scan getAuthorFeed for low-avg-like network accounts to recover the 0-like
+    posts missing from posts.parquet, removing the capture-selection bias for the
+    small-account analyses. Writes 5-col shards to a fresh authorfeed/ dir; resumes
+    via authorfeed_state.json (skips already-done accounts)."""
+    print("Loading targets: network authors with low avg likes...", flush=True)
+    net = pl.read_parquet(config.PROJECT_DIR / "cluster_members_sub.parquet",
+                          columns=["liker_did"]).unique()
+    auth = (pl.scan_parquet(str(config.POSTS_PATH))
+            .filter((pl.col("quote_count") >= 0)
+                    & (pl.col("post_created_at") >= pl.datetime(2023, 1, 1, time_zone="UTC"))
+                    & pl.col("like_count").is_not_null())
+            .group_by("post_author_did").agg(pl.col("like_count").mean().alias("avg")))
+    tgt = (auth.join(net.lazy(), left_on="post_author_did", right_on="liker_did", how="inner")
+              .filter(pl.col("avg") <= args.avg_max)
+              .collect(engine="streaming"))
+    targets = tgt["post_author_did"].to_list()
+    random.Random(42).shuffle(targets)
+    if args.sample:
+        targets = targets[:args.sample]
+
+    out_dir = config.PROJECT_DIR / "authorfeed"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    state_path = config.PROJECT_DIR / "authorfeed_state.json"
+    state = load_state(state_path, defaults={"shard_idx": 0})
+    pending = [d for d in targets if d not in state["done_users"]]
+    max_pages = max(1, (args.cap + 99) // 100)
+    print(f"{len(targets):,} targets (avg<={args.avg_max}); {len(pending):,} pending "
+          f"({len(state['done_users']):,} done); cap {args.cap} posts "
+          f"({max_pages} page/acct)  ->  {out_dir}", flush=True)
+
+    client = Client(concurrency=args.concurrency, user_agent="bsky-likes-authorfeed/0.1")
+    sem = asyncio.Semaphore(args.concurrency)
+    buffer = []
+    shard_idx = state.get("shard_idx", 0)
+    processed = 0
+    start = time.time()
+    win_t, win_n = start, 0
+
+    async def worker(did):
+        return did, await _fetch_authorfeed(client, did, sem, max_pages, args.cap)
+
+    tasks = [asyncio.create_task(worker(d)) for d in pending]
+    try:
+        for coro in asyncio.as_completed(tasks):
+            did, rows = await coro
+            buffer.extend(rows)
+            state["done_users"].add(did)
+            processed += 1
+            if processed % 50 == 0:
+                now = time.time()
+                inst = (processed - win_n) / (now - win_t) if now > win_t else 0.0
+                eta = (len(pending) - processed) / inst / 3600 if inst > 0 else 0.0
+                print(f"  [{processed}/{len(pending)}] posts buffered: {len(buffer):,}  "
+                      f"rate: {inst:.1f}/s  eta: {eta:.1f}h", flush=True)
+                win_t, win_n = now, processed
+            if len(buffer) >= 500_000:
+                _flush_authorfeed(buffer, shard_idx, out_dir)
+                shard_idx += 1
+                state["shard_idx"] = shard_idx
+                buffer = []
+            if processed % config.CHECKPOINT_EVERY == 0:
+                if buffer:
+                    _flush_authorfeed(buffer, shard_idx, out_dir)
+                    shard_idx += 1
+                    state["shard_idx"] = shard_idx
+                    buffer = []
+                save_state(state_path, state)
+    finally:
+        for t in tasks:
+            if not t.done():
+                t.cancel()
+        if buffer:
+            _flush_authorfeed(buffer, shard_idx, out_dir)
+            shard_idx += 1
+            state["shard_idx"] = shard_idx
+        print(f"  saving state ({len(state['done_users']):,} accounts done)...", flush=True)
+        save_state(state_path, state)
+        await client.close()
+    print(f"\nAuthor-feed scan complete: {processed:,} accounts this run -> {out_dir}",
+          flush=True)
+
+
+# ============================================================================
 # CLI
 # ============================================================================
 def build_parser():
@@ -535,6 +677,23 @@ def build_parser():
              "and uses no post metadata, so this is a multi-day API job for data "
              "nothing currently reads.")
 
+    p_af = sub.add_parser(
+        "authorfeed",
+        help="Scan getAuthorFeed for low-avg-like network accounts to recover their "
+             "0-like posts (de-bias the small-account analyses). Writes to authorfeed/.")
+    p_af.add_argument(
+        "--avg-max", type=float, default=6.0,
+        help="Only scan accounts whose measured avg likes <= this (default 6).")
+    p_af.add_argument(
+        "--cap", type=int, default=100,
+        help="Max POSTS to fetch per account (default 100 = 1 page).")
+    p_af.add_argument(
+        "--sample", type=int, default=None,
+        help="Randomly cap the number of accounts scanned (default: all matching).")
+    p_af.add_argument(
+        "--concurrency", type=int, default=24,
+        help="Parallel request workers (default 24; the client backs off on 429).")
+
     return p
 
 
@@ -546,6 +705,7 @@ def main():
         "backward": run_backward_mode,
         "add-handles": run_add_handles_mode,
         "sweep": run_sweep_mode,
+        "authorfeed": run_authorfeed_mode,
     }[args.mode]
     asyncio.run(runner(args))
 
