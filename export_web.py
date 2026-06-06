@@ -243,7 +243,11 @@ def export_punching(author_df):
     (log) -- RAW, no +1, matching the hexbin; 0-value accounts land off the log
     axis. `author_df` is the plotted set, a pandas DataFrame with
     handle/followers_count/likes_per_post. Binary handles + positions."""
-    df = author_df[author_df["handle"].notna()]
+    # Filter to >0 on both axes (same as the hexbin's _pos): a 0 would be
+    # log10(0) = -inf, which breaks the search-highlight ring's pixel position.
+    df = author_df[author_df["handle"].notna()
+                   & (author_df["followers_count"] > 0)
+                   & (author_df["likes_per_post"] > 0)]
     handles = [str(h).lower() for h in df["handle"].tolist()]
     xy = np.column_stack([
         df["followers_count"].to_numpy().astype(np.float32),

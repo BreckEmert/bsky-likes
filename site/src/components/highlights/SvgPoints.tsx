@@ -24,6 +24,8 @@ export function SvgPoints({ items, bounds, imgRect, compact = false }: Props) {
     <g className="svg-points">
       {items.map((it) => {
         const { x, y } = dataToPixel(bounds, imgRect, it.point[0], it.point[1]);
+        // Skip un-plottable points (e.g. a 0 on a log axis -> -Infinity pixel).
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
         const r = it.big ? 13 : 9.5;
         return (
           <g key={it.handle}>

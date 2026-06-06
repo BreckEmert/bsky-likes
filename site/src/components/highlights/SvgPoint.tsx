@@ -13,6 +13,9 @@ interface Props {
 export function SvgPoint({ handle, point, bounds, imgRect }: Props) {
   if (!handle || !point || !bounds || !imgRect) return null;
   const { x, y } = dataToPixel(bounds, imgRect, point[0], point[1]);
+  // Guard un-plottable points (e.g. a 0 on a log axis -> log10(0) = -Infinity),
+  // which would otherwise draw a broken ring at a non-finite coordinate.
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   const PINK = "#ec4899";
 
   return (
