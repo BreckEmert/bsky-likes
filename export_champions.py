@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 export_champions.py — for each community, find the accounts it rallies around,
-under FOUR interchangeable lenses (the "champions" map tab lets the viewer switch
+under THREE interchangeable lenses (the "champions" map tab lets the viewer switch
 between them live):
 
-  - loyalty      share of an account's superfans that live in THIS community
-                 (superfan = liked >= FAN_MIN_LIKES of their posts). High = this
-                 community is the account's home base.  [DEFAULT]
-  - devotion     raw count of superfans here. "Who does this community love most."
+  - devotion     raw count of superfans here (superfan = liked >= FAN_MIN_LIKES of
+                 their posts). "Who does this community love most." Shown to the
+                 viewer as "Loyalty rate".  [DEFAULT]
   - distinct     LIFT: community like-rate / whole-site like-rate. Surfaces niche
                  signature accounts the rest of Bluesky doesn't care about.
   - likerate     average likes-per-post from this community (prolific accounts
@@ -51,12 +50,8 @@ SITE = ROOT / "site" / "public" / "explore"
 # Lens metadata travels with the data so the frontend renders the picker +
 # mini-explanations from one source of truth. `rank` is the column to sort by.
 METRICS = [
-    {"id": "loyalty", "label": "Loyalty rate", "rank": "loyaltyScore", "default": True,
-     "blurb": "Accounts with a high percentage of their superfans (15+ likes) in "
-              "this community."},
-    {"id": "devotion", "label": "Devotion", "rank": "superfans",
-     "blurb": "Accounts with the most superfans (15+ likes) in this community "
-              "(the raw-count version of Loyalty rate)."},
+    {"id": "devotion", "label": "Loyalty rate", "rank": "superfans", "default": True,
+     "blurb": "Accounts with the most superfans (15+ likes) in this community."},
     {"id": "distinct", "label": "Distinctiveness", "rank": "lift",
      "blurb": "Accounts this community likes at a far higher rate than the rest of "
               "Bluesky does (highest lift)."},
@@ -246,7 +241,6 @@ def build_variant(rank, floor):
 
 
 FLOORS = {
-    "loyalty": pl.col("superfans") >= SUPERFAN_FLOOR,
     "devotion": pl.col("superfans") >= SUPERFAN_FLOOR,
     # lift, but also require a real local following (>=10 superfans), else it
     # surfaces accounts liked ONCE by many (0-1 superfans) -> obscure flukes.
