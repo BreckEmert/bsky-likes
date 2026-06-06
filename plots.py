@@ -212,6 +212,33 @@ print(f"Joined frame: {n_joined:,} rows (lazy)")
 print(f"Posts:        {len(posts_df):,} rows")
 print(f"Users:        {len(users_df):,} rows")
 
+# De-biased OWN-POST source for the per-author popularity plots (punching, like-
+# repost). posts.parquet only has posts that got >=1 like from the network, so it
+# hides low-engagement accounts' flops and overstates them ~1.9x. The `authorfeed`
+# scan recovered those accounts' true post sets (incl. 0-like posts); use it for the
+# scanned accounts and keep posts.parquet for everyone else (high-engagement
+# accounts have ~no missing posts). Falls back to posts.parquet if the scan is absent.
+_af_dir = PROJECT_DIR / "authorfeed"
+_af_files = sorted(_af_dir.glob("part-*.parquet")) if _af_dir.exists() else []
+if _af_files:
+    _af = (pl.read_parquet([str(f) for f in _af_files])
+           .select(pl.col("author_did").alias("post_author_did"),
+                   pl.col("like_count").cast(pl.Int64),
+                   pl.col("repost_count").cast(pl.Int64)))
+    _scanned = _af.select("post_author_did").unique()
+    own_posts = pl.concat([
+        _af,
+        posts_df.select("post_author_did",
+                        pl.col("like_count").cast(pl.Int64),
+                        pl.col("repost_count").cast(pl.Int64))
+                .join(_scanned, on="post_author_did", how="anti"),
+    ])
+    print(f"Own-post de-bias: authorfeed for {_scanned.height:,} accounts "
+          f"({len(_af):,} posts) + posts.parquet for the rest")
+else:
+    own_posts = posts_df.select(["post_author_did", "like_count", "repost_count"])
+    print("Own-post de-bias: no authorfeed/ scan -> using posts.parquet only")
+
 
 # %% Build per-liker stats with 4 mainstreaminess scorers
 # print("Computing per-liker stats...")
@@ -401,7 +428,7 @@ print(f"  used {len(hist):,} users")
 # %% PLOT 3 — Like-Repost Manifold
 # 2D density of (avg likes per post, avg reposts per post) across all authors.
 print("\n[5/10] Like-Repost Manifold (per author)")
-author_eng = (posts_df
+author_eng = (own_posts
     .group_by("post_author_did")
     .agg(
         pl.col("like_count").mean().alias("avg_likes"),
@@ -630,7 +657,7 @@ plt.close('all')  # free figure memory from the previous cell
 print("\n[9/10] Punching Above Their Weight")
 
 # Compute author_stats once -- reused by 9 and 9.5
-author_stats = (posts_df
+author_stats = (own_posts
     .group_by("post_author_did")
     .agg(pl.col("like_count").sum().alias("total_likes"),
          pl.len().alias("n_posts"))
