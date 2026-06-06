@@ -201,7 +201,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
         {/* "Highlight 15 you follow" control (punching plot). */}
         {isFollows && (
           <div className="plotpage__search">
-            <FollowsHighlight points={points} onPicks={setFollowPicks} />
+            <FollowsHighlight points={points} onPicks={setFollowPicks} compact={isMobile} />
           </div>
         )}
 
@@ -244,7 +244,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
                 same ring (both load binary point data). deck.gl hover-any-point
                 is a deferred enhancement; the search-highlight is identical. */}
             {isFollows && (
-              <SvgPoints items={followItems} bounds={bounds} imgRect={imgRect} />
+              <SvgPoints items={followItems} bounds={bounds} imgRect={imgRect} compact={isMobile} />
             )}
             {(plot.highlight === "svg-point" ||
               plot.highlight === "deck-scatter") && (

@@ -228,12 +228,6 @@ body {
   object-fit: contain;
   user-select: none;
 }
-/* Attention Inequality (long-tail) ran a bit large; cap it a touch. Safe
-   because this plot has no highlight overlay to keep pixel-aligned. */
-.plotpage__image--long-tail {
-  max-width: 76%;
-  max-height: 86%;
-}
 
 /* Overlay sits over the whole stage; highlight/deck layers draw here. It must
    not intercept pointer events meant for the plot underneath. */
@@ -702,9 +696,9 @@ body {
   font-weight: 700;
   color: #e6edf3;
 }
-/* metric description, directly under the title */
+/* metric description, sits below the title + the two segmented controls */
 .champs__desc {
-  margin-top: 5px;
+  margin-top: 10px;
   font-size: 14px;
   line-height: 1.4;
   color: var(--muted);
@@ -1112,7 +1106,9 @@ body {
   .champs__head { margin-bottom: 8px; gap: 12px; }
   .champs__title { font-size: 15px; }
   .champs__desc { font-size: 11.5px; }
-  .champs__stat { white-space: normal; }
+  /* Drop the "X% non-famous under this lens" note on phones, but keep its box so
+     the legend/threshold note below stay in the same place (cleaner gap). */
+  .champs__stat { visibility: hidden; }
   /* aside stacks under the intro on the phone -> left-align it (incl. the note) */
   .champs__aside { align-items: flex-start; text-align: left; }
   .champs__classnote { text-align: left; white-space: normal; }
@@ -1149,6 +1145,12 @@ body {
   }
   .champs__tree--flat .champrow__size { display: none; }
 
+  /* The 74px min-height exists only to keep the axes box at the SAME y across
+     tabs on desktop; on phones the page scrolls top-aligned, so let the header
+     collapse to its content and pull everything up under the search. */
+  .plotpage { padding: 10px 20px 16px; }
+  .plotpage__header { min-height: 0; margin-bottom: 4px; }
+
   /* Plots on phones: bleed the plot toward the screen edges, and sit it at the
      TOP-left (just under the search overlay) instead of vertically centered, so
      square plots use the full width and run down as far as they need. */
@@ -1156,8 +1158,12 @@ body {
     margin-left: -14px;
     margin-right: -14px;
     align-items: flex-start;   /* top, not vertically centered */
-    padding-top: 70px;         /* clear the floating search box */
+    padding-top: 48px;         /* just clears the floating search box */
   }
+  /* The stage already provides the search-box clearance, so the rankings table
+     doesn't need its own 48px on top -- that double padding is what pushed it
+     way down the screen. */
+  .listrows { padding-top: 4px; }
   /* Narrow the handle search (~65% of before) so the "ranks by mainstreaminess"
      note beside it isn't pushed off-screen. (Follows box sets its own width.) */
   .plotpage__search { width: 165px; max-width: 46%; }

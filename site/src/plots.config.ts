@@ -177,12 +177,15 @@ const RAW_PLOTS: PlotConfig[] = [
 // reading flow (popularity -> ratios -> timing -> reach -> inequality) is easy
 // to re-tune without moving big config blocks around.
 const PLOT_ORDER = [
-  "typical-popularity",
-  "popularity-curve",
-  "leaderboards",
+  // 3 like plots first ...
   "like-repost",
   "half-life",
   "punching",
+  // ... then the 3 popularity plots ...
+  "typical-popularity",
+  "popularity-curve",
+  "leaderboards",
+  // ... then the rest.
   "wakes-up",
   "long-tail",
   "activity",

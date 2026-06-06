@@ -9,15 +9,14 @@ import {
 
 export interface FollowPicks {
   user: string | null; // the entered handle, if it's on the plot
-  picks: string[]; // up to 15 sampled follows that are on the plot
+  picks: string[]; // up to N sampled follows that are on the plot
 }
 
 interface Props {
   points: PointData | null; // the plot's handle set (top-4,000 accounts)
   onPicks: (p: FollowPicks) => void;
+  compact?: boolean; // phones: highlight fewer so the small plot isn't cluttered
 }
-
-const N = 15;
 
 function sample<T>(arr: T[], n: number): T[] {
   const a = [...arr];
@@ -31,7 +30,8 @@ function sample<T>(arr: T[], n: number): T[] {
 // "Punch in your handle" -> highlights 15 random accounts you follow that are in
 // the top-4,000 set, plus you. Re-roll for a fresh 15. All client-side against
 // Bluesky's public API.
-export function FollowsHighlight({ points, onPicks }: Props) {
+export function FollowsHighlight({ points, onPicks, compact = false }: Props) {
+  const N = compact ? 10 : 15; // fewer highlights on the smaller mobile plot
   const [handle, setHandle] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -172,7 +172,7 @@ export function FollowsHighlight({ points, onPicks }: Props) {
           onClick={onButton}
           disabled={busy || !handle.trim()}
         >
-          🎲 Highlight 15 Followed
+          🎲 Highlight {N} Followed
         </button>
       </div>
       {status && <div className="followshl__status">{status}</div>}

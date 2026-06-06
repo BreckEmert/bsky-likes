@@ -22,15 +22,7 @@ interface Props {
 // The lead stat in the tooltip, phrased for the active lens (each lens ranks by a
 // different thing, so we surface that thing first).
 function leadStat(metric: string, c: Champion) {
-  const pct = Math.round(c.share * 100);
   switch (metric) {
-    case "loyalty":
-      return (
-        <>
-          <b>{pct}%</b> of their superfans are right here ({c.superfans.toLocaleString()} of{" "}
-          {c.globalSuperfans.toLocaleString()})
-        </>
-      );
     case "devotion":
       return (
         <>
@@ -54,7 +46,7 @@ function leadStat(metric: string, c: Champion) {
   }
 }
 
-// "Who does each community rally around?" — switch the LENS (loyalty / devotion /
+// "Who does each community rally around?" — switch the LENS (loyalty rate /
 // distinctiveness / like-rate) and the LAYOUT (by topic / by community). Each lens
 // is a precomputed variant; the radio just swaps the data.
 export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }: Props) {
@@ -163,22 +155,7 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
       <div className="champs__head">
         <div className="champs__intro">
           <div className="champs__title">Who does each community rally around?</div>
-          <div className="champs__desc">{blurb}</div>
           <div className="champs__controls">
-            <div className="champs__toggle" role="tablist" aria-label="Ranking lens">
-              {data.metrics.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={m.id === activeId}
-                  className={"champs__toggle-b" + (m.id === activeId ? " is-on" : "")}
-                  onClick={() => setMetric(m.id)}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
             <div className="champs__toggle" role="tablist" aria-label="Champions layout">
               <button
                 type="button"
@@ -199,7 +176,22 @@ export function ChampionsView({ view, onSwitch, selectedHandle, onSelectHandle }
                 By community
               </button>
             </div>
+            <div className="champs__toggle" role="tablist" aria-label="Ranking lens">
+              {data.metrics.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={m.id === activeId}
+                  className={"champs__toggle-b" + (m.id === activeId ? " is-on" : "")}
+                  onClick={() => setMetric(m.id)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
           </div>
+          <div className="champs__desc">{blurb}</div>
           <div className="champs__search">
             <SearchBox
               index={members?.handles ?? []}

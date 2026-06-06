@@ -116,8 +116,11 @@ function labelReveals(labels: Region[], sizeBase: number): Map<Region, number> {
 // italic, overview only. (data coords, tune by eye). The handles here are casual
 // number-suffixed accounts with diffuse, mainstream likes -- no niche, hence the
 // gap between the strong clusters.
-const VOID_LABELS: { name: string; x: number; y: number }[] = [
-  { name: "The Normie Void", x: 1.4, y: 4.62 },
+// `name` = the faint gray italic annotation shown on the zoomed-OUT overview;
+// `community` = the bright community title it RESOLVES INTO once you zoom in past
+// the tier swap (instead of just vanishing). Same spot, two zoom states.
+const VOID_LABELS: { name: string; community: string; x: number; y: number }[] = [
+  { name: "The Normie Void", community: "Normies", x: 1.4, y: 4.62 },
 ];
 
 export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", mapView, onSwitchView }: Props) {
@@ -488,6 +491,37 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           opacity: tier1Opacity,
           pickable: false,
           updateTriggers: { opacity: [tier1Opacity] },
+        })
+      );
+    }
+    // ... and once you zoom IN past the tier swap, the void resolves INTO a
+    // community title at the same spot (bright + bold, like the real community
+    // labels) instead of disappearing.
+    if (tier2Opacity > 0 && VOID_LABELS.length) {
+      const vScale = isMobile ? 0.9 : 1; // match tier-2 mobile shrink
+      const w = LABEL_WHITE;
+      const white = (c: number) => Math.round(c * (1 - w) + 255 * w);
+      out.push(
+        new TextLayer({
+          id: "voids-community",
+          data: VOID_LABELS,
+          getPosition: (d: { x: number; y: number }) => [d.x, d.y],
+          getText: (d: { community: string }) => d.community,
+          getSize: 20 * vScale,
+          sizeUnits: "pixels",
+          // near-white, matching the community (tier-2) titles' default tint
+          getColor: [white(240), white(246), white(252), 255],
+          fontFamily: '"DejaVu Sans", system-ui, sans-serif',
+          fontWeight: 700,
+          characterSet: "auto",
+          fontSettings: { sdf: true, buffer: 12, radius: 18 },
+          outlineWidth: 7,
+          outlineColor: [6, 9, 14, 235],
+          getTextAnchor: "middle",
+          getAlignmentBaseline: "center",
+          opacity: tier2Opacity,
+          pickable: false,
+          updateTriggers: { opacity: [tier2Opacity], getSize: [vScale] },
         })
       );
     }

@@ -11,13 +11,15 @@ interface Props {
   items: HLPoint[];
   bounds: Bounds | null;
   imgRect: Rect | null;
+  compact?: boolean; // phones: smaller label font so the small plot isn't crowded
 }
 
 // Draws a ring + label for each highlighted point over the plot PNG. Same look
-// as SvgPoint but for a set (the 15 sampled follows in pink + the user in a
+// as SvgPoint but for a set (the sampled follows in pink + the user in a
 // distinct color).
-export function SvgPoints({ items, bounds, imgRect }: Props) {
+export function SvgPoints({ items, bounds, imgRect, compact = false }: Props) {
   if (!bounds || !imgRect || !items.length) return null;
+  const fs = compact ? { big: 11, normal: 9.5 } : { big: 13, normal: 11.5 };
   return (
     <g className="svg-points">
       {items.map((it) => {
@@ -31,7 +33,7 @@ export function SvgPoints({ items, bounds, imgRect }: Props) {
             <text
               x={x + r + 4}
               y={y - r + 2}
-              fontSize={it.big ? 13 : 11.5}
+              fontSize={it.big ? fs.big : fs.normal}
               fontWeight={it.big ? 700 : 600}
               fill={it.color}
               stroke="#0e1116"
