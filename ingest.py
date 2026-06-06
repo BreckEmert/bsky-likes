@@ -50,18 +50,23 @@ async def _enrich_incremental(client, likes_dir=None):
     `likes_dir` defaults to LIKES_DIR; the sweep mode passes its own shard dir.
     """
     likes_dir = likes_dir or config.LIKES_DIR
-    print("\n=== ENRICHMENT PHASE ===")
-    all_likes = pl.scan_parquet(str(likes_dir / "part-*.parquet")).collect()
-    all_post_uris = set(all_likes["post_uri"].to_list())
-
-    existing_posts = pl.read_parquet(config.POSTS_PATH)
-    existing_post_uris = set(existing_posts["post_uri"].to_list())
-    new_post_uris = all_post_uris - existing_post_uris
-
-    print(f"Total likes now:    {len(all_likes):,}")
-    print(f"Total unique posts: {len(all_post_uris):,}")
-    print(f"Already enriched:   {len(existing_post_uris):,}")
-    print(f"NEW to enrich:      {len(new_post_uris):,}")
+    print("\n=== ENRICHMENT PHASE ===", flush=True)
+    # Find post_uris that appear in the shards but are NOT already enriched, WITHOUT
+    # pulling the (hundreds of millions of) likes into RAM. A lazy, column-projected
+    # scan + a STREAMING anti-join against the existing post_uris -> we only ever
+    # materialize the small result (the genuinely-new URIs). The previous version
+    # .collect()'d all 7 GB and built a ~200M-entry Python set, which swap-thrashed.
+    print("Scanning shards for un-enriched posts (streaming, low memory)...",
+          flush=True)
+    new_uris_lazy = (
+        pl.scan_parquet(str(likes_dir / "part-*.parquet"))
+          .select("post_uri").unique()
+          .join(pl.scan_parquet(config.POSTS_PATH).select("post_uri"),
+                on="post_uri", how="anti")
+    )
+    new_post_uris = new_uris_lazy.collect(engine="streaming")["post_uri"].to_list()
+    existing_posts = pl.read_parquet(config.POSTS_PATH)  # small relative to the likes
+    print(f"NEW posts to enrich: {len(new_post_uris):,}", flush=True)
 
     if new_post_uris:
         new_post_rows = await enrich_posts(
