@@ -174,10 +174,12 @@ async def run_initial_mode(args):
             return
 
         # FULL RUN: enrichment
-        print("\n=== ENRICHMENT PHASE ===")
+        print("\n=== ENRICHMENT PHASE ===", flush=True)
         shards = list(config.LIKES_DIR.glob("*.parquet"))
+        print(f"Loading {len(shards):,} like shards from disk "
+              "(no progress bar -- this can take a while)...", flush=True)
         df = pl.scan_parquet([str(s) for s in shards]).collect()
-        print(f"Total likes loaded: {len(df):,}")
+        print(f"Total likes loaded: {len(df):,}", flush=True)
 
         unique_posts = df["post_uri"].unique().to_list()
         posts_rows = await enrich_posts(

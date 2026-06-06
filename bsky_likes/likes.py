@@ -296,7 +296,15 @@ async def run_initial(client, user_dids, state, state_path, cutoff,
             flush_likes(buffer, shard_idx, out_dir)
             shard_idx += 1
             state["shard_idx"] = shard_idx
+        # The final state write re-serializes the WHOLE done_users set, which can
+        # take several seconds with nothing else printing -- announce it so the end
+        # of the run doesn't look like a hang.
+        print(f"  saving final state ({len(state['done_users']):,} users done)...",
+              flush=True)
         save_state(state_path, state)
+        print("  state saved.", flush=True)
+    print(f"\nInitial pull complete: {processed:,} users processed this run.",
+          flush=True)
     return processed
 
 
