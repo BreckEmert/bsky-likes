@@ -470,9 +470,16 @@ async def run_sweep_mode(args):
             client, targets, state, config.SWEEP_STATE_PATH, since,
             cap=float("inf"), out_dir=out_dir, concurrency=args.concurrency)
 
-        # Enrich posts/users newly discovered in the sweep shards, reusing the
-        # existing enriched tables.
-        await _enrich_incremental(client, likes_dir=out_dir)
+        # The champions board (the ONLY consumer of the sweep) derives the author
+        # from the post_uri and uses NO post metadata (like_count/created_at), so we
+        # SKIP post-enrichment by default. Enriching the sweep's newly-seen posts is
+        # a multi-day, tens-of-millions-of-posts API job for data nothing reads.
+        # Pass --enrich to run it anyway.
+        if args.enrich:
+            await _enrich_incremental(client, likes_dir=out_dir)
+        else:
+            print("\nSkipping post-enrichment: champions derive the author from the "
+                  "post_uri and use no post metadata. Pass --enrich to fetch it anyway.")
         print("\n=== DONE ===")
     finally:
         await client.close()
@@ -521,6 +528,12 @@ def build_parser():
         "--concurrency", type=int, default=24,
         help="Parallel request workers for the sweep (default 24; the client backs "
              "off on 429). Higher = faster but more rate-limit pressure.")
+    p_sweep.add_argument(
+        "--enrich", action="store_true",
+        help="After the pull, fetch post/author metadata for newly-seen posts. OFF "
+             "by default: the champions board derives the author from the post_uri "
+             "and uses no post metadata, so this is a multi-day API job for data "
+             "nothing currently reads.")
 
     return p
 
