@@ -156,6 +156,14 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     if (typeof window !== "undefined" && window.innerWidth <= 1100) return;
     setNotesOpen(framing !== "pretty");
   }, [framing]);
+  // The FIRST profile selection (none -> selected) collapses the notes to clear
+  // the top-right for the profile card; later selection changes don't.
+  const prevSelRef = useRef<string | null>(selectedHandle);
+  useEffect(() => {
+    const was = prevSelRef.current;
+    prevSelRef.current = selectedHandle;
+    if (!was && selectedHandle) setNotesOpen(false);
+  }, [selectedHandle]);
   const initialZoom = useRef(0);
   const minZoomRef = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
@@ -338,12 +346,31 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   );
   const glowMul = dotPct + (1 - dotPct) * glowScale;
 
+  // The raw continuum palette reads a little flat, so push saturation up (more) and
+  // brightness up (a bit less). Saturation = lerp away from per-pixel luminance.
+  // Drives the Continuum dots, glow, AND the recolored legend keys below.
+  const colorsBoosted = useMemo(() => {
+    if (!data) return null;
+    const SAT = 1.25, BRIGHT = 1.1;
+    const src = data.colors, len = src.length;
+    const out = new Uint8Array(len);
+    const cl = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : Math.round(v));
+    for (let i = 0; i < len; i += 3) {
+      const r = src[i], g = src[i + 1], b = src[i + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      out[i] = cl((lum + (r - lum) * SAT) * BRIGHT);
+      out[i + 1] = cl((lum + (g - lum) * SAT) * BRIGHT);
+      out[i + 2] = cl((lum + (b - lum) * SAT) * BRIGHT);
+    }
+    return out;
+  }, [data]);
+
   // Per-topic average CONTINUUM color. In Continuum mode the legend keys recolor to
   // the gradient (each topic tinted by where its dots sit), so the same topic legend
   // stays useful in both modes. Keyed by the topic's "r,g,b" color string.
   const legendContinuum = useMemo(() => {
     if (!data?.legend || !data.colorsTopic) return null;
-    const ct = data.colorsTopic, co = data.colors, n = data.n;
+    const ct = data.colorsTopic, co = colorsBoosted ?? data.colors, n = data.n;
     const acc = new Map<string, [number, number, number, number]>();
     for (let i = 0; i < n; i++) {
       const k = ct[3 * i] + "," + ct[3 * i + 1] + "," + ct[3 * i + 2];
@@ -355,20 +382,21 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     for (const [k, a] of acc)
       if (a[3]) out.set(k, [Math.round(a[0] / a[3]), Math.round(a[1] / a[3]), Math.round(a[2] / a[3])]);
     return out;
-  }, [data]);
+  }, [data, colorsBoosted]);
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
     const b = data.bounds;
+    const continuum = colorsBoosted ?? data.colors;
     const activeColors =
-      colorMode === "topics" && data.colorsTopic ? data.colorsTopic : data.colors;
+      colorMode === "topics" && data.colorsTopic ? data.colorsTopic : continuum;
     // The GLOW uses a smoothed, locally-DOMINANT topic color in Topics mode, so a
     // few off-topic dots can't muddy a cluster's bloom (the crisp dots below keep
-    // their true per-account color). Continuum keeps the positional palette.
+    // their true per-account color). Continuum keeps the (boosted) positional palette.
     const glowColors =
       colorMode === "topics"
         ? data.colorsTopicDom ?? data.colorsTopic ?? data.colors
-        : data.colors;
+        : continuum;
     const out: unknown[] = [
       // Smooth density-color field behind the dots; fades out as you zoom in.
       new BitmapLayer({
@@ -536,7 +564,7 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, circle, dotPct, glowMul, isMobile]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, circle, dotPct, glowMul, colorsBoosted, isMobile]);
 
   return (
     <div className="exploremap" ref={ref}>
@@ -596,42 +624,55 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
       {/* Title / view switcher -- always visible so you can switch any time. */}
       {data && <MapTitleSwitch view={mapView} onSwitch={onSwitchView} />}
 
-      {/* Data caveats, pinned top-right. Collapsible so it never blocks the map. */}
+      {/* Top-right stack: data caveats, then the selected profile card BELOW them
+          (so the card slides down/up as the notes expand/collapse). Clicking
+          anywhere in the notes toggles them. */}
       {data && (
-        <div className={"mapnotes" + (notesOpen ? " is-open" : "")}>
-          <button
-            className="mapnotes__head"
-            onClick={() => setNotesOpen((v) => !v)}
+        <div className="maptopright">
+          <div
+            className={"mapnotes" + (notesOpen ? " is-open" : "")}
+            role="button"
+            tabIndex={0}
             aria-expanded={notesOpen}
+            onClick={() => setNotesOpen((v) => !v)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setNotesOpen((v) => !v);
+              }
+            }}
           >
-            <span>Limitations &amp; Notes</span>
-            <span className="mapnotes__chev">{notesOpen ? "–" : "+"}</span>
-          </button>
-          {notesOpen && (
-            <ul className="mapnotes__list">
-              <li>
-                Each account is represented by <strong>who they like</strong>, not
-                from <strong>what that account itself posts</strong>.
-              </li>
-              <li>
-                Limited to <strong>my extended network</strong> (~221k accounts, two
-                hops out), not all of Bluesky.
-              </li>
-              <li>
-                <strong>English-language</strong> accounts only, it doesn't cluster
-                as well otherwise.
-              </li>
-              <li>
-                Data was collected over two separate pulls on different date windows.
-                Counts may slightly differ if a popular post goes outside of those,
-                sorry!
-              </li>
-              <li>
-                Some viz drop low-signal accounts, e.g. the like/repost plot needs
-                1+ repost per post and 5+ posts.
-              </li>
-            </ul>
-          )}
+            <div className="mapnotes__head">
+              <span>Limitations &amp; Notes</span>
+              <span className="mapnotes__chev">{notesOpen ? "–" : "+"}</span>
+            </div>
+            {notesOpen && (
+              <ul className="mapnotes__list">
+                <li>
+                  Each account is represented by <strong>who they like</strong>, not
+                  from <strong>what that account itself posts</strong>.
+                </li>
+                <li>
+                  Limited to <strong>my extended network</strong> (~221k accounts, two
+                  hops out), not all of Bluesky.
+                </li>
+                <li>
+                  <strong>English-language</strong> accounts only, it doesn't cluster
+                  as well otherwise.
+                </li>
+                <li>
+                  Data was collected over two separate pulls on different date windows.
+                  Counts may slightly differ if a popular post goes outside of those,
+                  sorry!
+                </li>
+                <li>
+                  Some viz drop low-signal accounts, e.g. the like/repost plot needs
+                  1+ repost per post and 5+ posts.
+                </li>
+              </ul>
+            )}
+          </div>
+          <ProfileCard handle={selectedHandle} />
         </div>
       )}
 
@@ -642,7 +683,6 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           onSelect={onSelectHandle}
         />
       </div>
-      <ProfileCard handle={selectedHandle} />
 
       {data && data.colorsTopic && (
         <div className="exploremap__colormode">

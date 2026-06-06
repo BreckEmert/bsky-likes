@@ -201,7 +201,17 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
         {/* "Highlight 15 you follow" control (punching plot). */}
         {isFollows && (
           <div className="plotpage__search">
-            <FollowsHighlight points={points} onPicks={setFollowPicks} compact={isMobile} />
+            <FollowsHighlight
+              points={points}
+              onPicks={(p) => {
+                setFollowPicks(p);
+                // Carry the entered user into the GLOBAL selection, so the same
+                // profile stays highlighted/open when you switch to other plots
+                // (same as a handle search does).
+                if (p.user) onSelectHandle(p.user);
+              }}
+              compact={isMobile}
+            />
           </div>
         )}
 

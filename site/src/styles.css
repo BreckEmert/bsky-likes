@@ -1025,18 +1025,32 @@ body {
 }
 .exploremap__zoom-sep { margin: 0 7px; opacity: 0.5; }
 
-/* Data caveats, pinned top-right. Collapsible so it never blocks the field. */
-.mapnotes {
+/* Top-right stack: the data-caveats panel, with the selected profile card flowing
+   BELOW it (so the card slides down/up as the notes expand/collapse). Only the
+   container is positioned; children flow in a right-aligned column. */
+.maptopright {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none; /* the gaps pass clicks through to the map */
+}
+.maptopright > * { pointer-events: auto; }
+.maptopright .profilecard { position: static; top: auto; right: auto; }
+
+/* Data caveats. Clicking ANYWHERE on the panel toggles it. */
+.mapnotes {
   width: 300px;
   max-width: 38vw;
   background: rgba(10, 13, 18, 0.86);
   border: 1px solid var(--panel);
   border-radius: 8px;
   backdrop-filter: blur(2px);
+  cursor: pointer;
 }
 /* Collapsed = a compact pill (just the label), so it tucks into the corner above
    the centered title instead of a wide panel that the title could slide under. */
@@ -1091,8 +1105,13 @@ body {
   .exploremap__colormode { width: 47%; }
   /* Below the 3-line mobile title (which sits top-right); collapsed by default.
      Collapsed = a compact pill (clears the left legend); expand overlays the map. */
-  .mapnotes { top: 92px; right: 8px; left: auto; max-width: none; }
+  .maptopright { top: 92px; right: 8px; left: auto; }
+  .mapnotes { max-width: none; }
   .mapnotes.is-open { width: min(82vw, 300px); }
+  /* The profile card escapes the top-right stack to the viewport bottom on phones. */
+  .maptopright .profilecard {
+    position: fixed; top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-width: none;
+  }
   .maptitle {
     left: auto;
     right: 8px;
