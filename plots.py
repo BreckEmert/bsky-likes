@@ -72,9 +72,30 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 import numpy as np
+
+# Headless guard: when this file is run as a plain script from a terminal
+# (`python plots.py`) rather than inside an interactive IPython/Spyder session,
+# force the non-GUI "Agg" backend BEFORE pyplot is imported. That makes every
+# plt.show() a silent no-op: no figure window pops up and -- the actual pain --
+# nothing BLOCKS the run waiting for you to close that window. Spyder keeps its
+# interactive backend, so figures still render inline there. savefig + the web
+# export work identically on Agg.
+import matplotlib
+def _interactive_session():
+    try:
+        from IPython import get_ipython
+        return get_ipython() is not None
+    except Exception:
+        return False
+_HEADLESS = not _interactive_session()
+if _HEADLESS:
+    matplotlib.use("Agg")
+
 from matplotlib.colors import LogNorm
 import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
+if _HEADLESS:
+    plt.show = lambda *args, **kwargs: None  # never pop a window / block the run
 import pandas as pd
 import polars as pl
 
@@ -503,6 +524,15 @@ for _r in _binned.iter_rows(named=True):
 fig, ax = plt.subplots(figsize=(9.4, 5.7))   # x squashed ~25% from the wide default
 ax.stairs(counts, edges, fill=True, color=BSKY_BLUE, alpha=0.85)
 ax.set_xscale("log")
+# Fit the data to the box: no auto-padding left of 1 min or right of 4 months.
+ax.set_xlim(edges[0], edges[-1])
+ax.margins(x=0)
+# Human-readable y ticks (e.g. "2M") instead of matplotlib's stray "1e6" offset
+# label that floats at the top-left like a rogue title.
+from matplotlib.ticker import FuncFormatter
+ax.yaxis.set_major_formatter(FuncFormatter(
+    lambda v, _p: (f"{v/1e6:.0f}M" if v >= 1e6 else
+                   f"{v/1e3:.0f}K" if v >= 1e3 else f"{v:.0f}")))
 
 # Reference vertical lines for human-readable times
 markers = [
@@ -785,7 +815,12 @@ cb = fig.colorbar(im, ax=ax, label="likes")
 cb.outline.set_visible(False)
 plt.savefig(PLOTS_DIR / "10_heatmap.png")
 if WEB_EXPORT:
-    ew.export_png_and_bounds(fig, ax, "wakes-up", x_log=False, y_log=False, cbar=cb)
+    # Mobile axis is narrow: drop the "HH:00" labels for bare ints, anchoring the
+    # middle tick with "12PM" so the AM/PM read is obvious.
+    _mob_xticks = (list(range(0, 24, 2)),
+                   ["12PM" if h == 12 else str(h) for h in range(0, 24, 2)])
+    ew.export_png_and_bounds(fig, ax, "wakes-up", x_log=False, y_log=False,
+                             cbar=cb, mobile_xticks=_mob_xticks)
 plt.show()
 plt.close('all')  # free figure memory from the previous cell
 

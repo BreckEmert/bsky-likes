@@ -46,15 +46,18 @@ SITE_PLOTS.mkdir(parents=True, exist_ok=True)
 MOBILE_FIG = (6.5, 7.0)
 
 
-def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200, cbar=None):
+def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200,
+                          cbar=None, mobile_xticks=None):
     """Save a transparent PNG + bounds.json (axes' pixel rect) for the site.
 
     Emits TWO variants from the SAME drawn figure:
       {id}.png / {id}.bounds.json          -- desktop, at the cell's figsize
-      {id}.mobile.png / {id}.mobile.bounds.json -- squarer portrait, with any side
-          legend/colorbar moved BELOW the plot to free horizontal width on phones.
+      {id}.mobile.png / {id}.mobile.bounds.json -- squarer portrait, with the side
+          colorbar moved BELOW the plot to free horizontal width on phones.
     Pass `cbar` (the fig.colorbar return) so it can be re-laid-out horizontally for
-    mobile; ax legends are moved below automatically. The site loads only the
+    mobile. In-plot ax legends are left in place (only the color SCALE moves). Pass
+    `mobile_xticks=(positions, labels)` to give the MOBILE variant shorter/cleaner
+    x-tick labels than desktop (restored afterwards). The site loads only the
     matching variant per viewport, so a phone never downloads the desktop image.
     """
     import matplotlib as mpl
@@ -91,14 +94,10 @@ def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200, c
     orig = fig.get_size_inches().copy()
     desktop = _save("")                # desktop, at the cell's figsize
 
-    # --- MOBILE variant: move side legend/colorbar BELOW the plot, then go portrait
-    leg = ax.get_legend()
-    if leg is not None:
-        handles, labels = ax.get_legend_handles_labels()
-        if handles:
-            ax.legend(handles, labels, loc="upper center",
-                      bbox_to_anchor=(0.5, -0.12), ncol=min(len(handles), 3),
-                      facecolor="#1f2933", edgecolor="none", fontsize=8)
+    # --- MOBILE variant: move the COLORBAR below the plot, then go portrait.
+    # In-plot legends (mean=median, 10:1 likes:reposts, etc.) are intentionally
+    # left where the author placed them -- only the color SCALE moves below, so it
+    # doesn't overlap those small in-plot legends on phones.
     if cbar is not None:
         try:
             mappable = cbar.mappable
@@ -111,9 +110,21 @@ def export_png_and_bounds(fig, ax, plot_id, x_log=False, y_log=False, dpi=200, c
             ncb.outline.set_visible(False)
         except Exception as e:
             print(f"  (mobile colorbar relayout skipped for {plot_id}: {e})")
+    # Cleaner x-tick labels for the narrow mobile axis (e.g. "0 2 .. 12PM .. 22"
+    # instead of "00:00 02:00 .."). Saved + restored so desktop/Spyder are unchanged.
+    _saved_xticks = None
+    if mobile_xticks is not None:
+        _saved_xticks = (list(ax.get_xticks()),
+                         [t.get_text() for t in ax.get_xticklabels()])
+        _positions, _labels = mobile_xticks
+        ax.set_xticks(_positions)
+        ax.set_xticklabels(_labels)
     fig.set_size_inches(*MOBILE_FIG)
     _save(".mobile")                   # mobile: portrait, legend/colorbar below
     fig.set_size_inches(*orig)         # restore so the cell's plt.show() is unaffected
+    if _saved_xticks is not None:
+        ax.set_xticks(_saved_xticks[0])
+        ax.set_xticklabels(_saved_xticks[1])
     return desktop
 
 
