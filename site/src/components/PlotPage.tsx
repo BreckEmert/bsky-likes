@@ -203,6 +203,7 @@ export function PlotPage({ plot, selectedHandle, onSelectHandle }: Props) {
           <div className="plotpage__search">
             <FollowsHighlight
               points={points}
+              autoHandle={selectedHandle}
               onPicks={(p) => {
                 setFollowPicks(p);
                 // Carry the entered user into the GLOBAL selection, so the same

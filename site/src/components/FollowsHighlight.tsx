@@ -16,6 +16,7 @@ interface Props {
   points: PointData | null; // the plot's handle set (top-4,000 accounts)
   onPicks: (p: FollowPicks) => void;
   compact?: boolean; // phones: highlight fewer so the small plot isn't cluttered
+  autoHandle?: string | null; // global selection -> auto-start the highlight here
 }
 
 function sample<T>(arr: T[], n: number): T[] {
@@ -30,7 +31,7 @@ function sample<T>(arr: T[], n: number): T[] {
 // "Punch in your handle" -> highlights 15 random accounts you follow that are in
 // the top-4,000 set, plus you. Re-roll for a fresh 15. All client-side against
 // Bluesky's public API.
-export function FollowsHighlight({ points, onPicks, compact = false }: Props) {
+export function FollowsHighlight({ points, onPicks, compact = false, autoHandle = null }: Props) {
   const N = compact ? 10 : 15; // fewer highlights on the smaller mobile plot
   const [handle, setHandle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -76,16 +77,17 @@ export function FollowsHighlight({ points, onPicks, compact = false }: Props) {
     onPicks({ user: u, picks: sample(p, N) });
   };
 
-  const run = async () => {
-    if (!points || !handle.trim() || busy) return;
+  const run = async (hArg?: string) => {
+    const h = (hArg ?? handle).trim();
+    if (!points || !h || busy) return;
     setBusy(true);
     setStatus("looking you up…");
     try {
-      const did = await resolveHandle(handle);
+      const did = await resolveHandle(h);
       setStatus("reading who you follow…");
       const follows = await getFollows(did);
-      const present = [...new Set(follows.filter((h) => points.index.has(h)))];
-      const me = handle.trim().replace(/^@+/, "").toLowerCase();
+      const present = [...new Set(follows.filter((ph) => points.index.has(ph)))];
+      const me = h.replace(/^@+/, "").toLowerCase();
       const onPlot = points.index.has(me) ? me : null;
       fetchedRef.current = me; // subsequent clicks for the same handle re-roll
       setPool(present);
@@ -117,6 +119,19 @@ export function FollowsHighlight({ points, onPicks, compact = false }: Props) {
     if (pool.length > 0 && cur === fetchedRef.current) reshuffle();
     else run();
   };
+
+  // Reverse sync: when a profile is selected elsewhere (a search, a map dot, or
+  // another plot), auto-start the highlight here for that handle. The fetchedRef
+  // guard stops our own onPicks -> global-select round-trip from looping.
+  useEffect(() => {
+    const h = (autoHandle ?? "").trim();
+    if (!h || !points) return;
+    const norm = h.replace(/^@+/, "").toLowerCase();
+    if (norm === fetchedRef.current) return; // already fetched for this handle
+    setHandle(h);
+    run(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoHandle, points]);
 
   return (
     <div className="followshl" ref={boxRef}>
