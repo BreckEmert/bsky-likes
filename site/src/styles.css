@@ -1025,6 +1025,51 @@ body {
 }
 .exploremap__zoom-sep { margin: 0 7px; opacity: 0.5; }
 
+/* Data caveats, pinned top-right. Collapsible so it never blocks the field. */
+.mapnotes {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+  width: 300px;
+  max-width: 38vw;
+  background: rgba(10, 13, 18, 0.86);
+  border: 1px solid var(--panel);
+  border-radius: 8px;
+  backdrop-filter: blur(2px);
+}
+/* Collapsed = a compact pill (just the label), so it tucks into the corner above
+   the centered title instead of a wide panel that the title could slide under. */
+.mapnotes:not(.is-open) { width: auto; max-width: none; }
+.mapnotes__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 11px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mapnotes__chev { color: var(--muted); font-weight: 600; line-height: 1; }
+.mapnotes__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.mapnotes__list strong { color: #cdd9e6; font-weight: 700; }
+
 .plotpage__placeholder {
   display: flex;
   align-items: center;
@@ -1044,6 +1089,10 @@ body {
   /* Map overlays: legend on the left half, title + switcher on the right. */
   .exploremap__search { width: 47%; max-width: none; }
   .exploremap__colormode { width: 47%; }
+  /* Below the 3-line mobile title (which sits top-right); collapsed by default.
+     Collapsed = a compact pill (clears the left legend); expand overlays the map. */
+  .mapnotes { top: 92px; right: 8px; left: auto; max-width: none; }
+  .mapnotes.is-open { width: min(82vw, 300px); }
   .maptitle {
     left: auto;
     right: 8px;

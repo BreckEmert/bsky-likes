@@ -142,6 +142,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   const fromDotRef = useRef(false); // true when the selection came from clicking a map dot
   const [hover, setHover] = useState<{ handle: string; x: number; y: number } | null>(null);
   const [colorMode, setColorMode] = useState<"continuum" | "topics">("topics");
+  // top-right "Limitations & Notes" -- expanded on wide screens, collapsed to a
+  // compact pill on narrower ones (<=1100px) where the centered title would
+  // otherwise slide under the open panel.
+  const [notesOpen, setNotesOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth > 1100
+  );
   const initialZoom = useRef(0);
   const minZoomRef = useRef(0);
   const [zoomRange, setZoomRange] = useState<{ min: number; max: number } | null>(null);
@@ -562,6 +568,45 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
 
       {/* Title / view switcher -- always visible so you can switch any time. */}
       {data && <MapTitleSwitch view={mapView} onSwitch={onSwitchView} />}
+
+      {/* Data caveats, pinned top-right. Collapsible so it never blocks the map. */}
+      {data && (
+        <div className={"mapnotes" + (notesOpen ? " is-open" : "")}>
+          <button
+            className="mapnotes__head"
+            onClick={() => setNotesOpen((v) => !v)}
+            aria-expanded={notesOpen}
+          >
+            <span>Limitations &amp; Notes</span>
+            <span className="mapnotes__chev">{notesOpen ? "–" : "+"}</span>
+          </button>
+          {notesOpen && (
+            <ul className="mapnotes__list">
+              <li>
+                Built from likes. Who likes whom. <strong>Not</strong> the content
+                of anyone's posts.
+              </li>
+              <li>
+                Limited to <strong>my extended network</strong> (~221k accounts, two
+                hops out), not all of Bluesky.
+              </li>
+              <li>
+                <strong>English-language</strong> accounts only, it doesn't cluster
+                as well otherwise.
+              </li>
+              <li>
+                Data was collected over two separate pulls on different date windows.
+                Counts may slightly differ if a popular post goes outside of those,
+                sorry!
+              </li>
+              <li>
+                Some viz drop low-signal accounts, e.g. the like/repost plot needs
+                1+ repost per post and 5+ posts.
+              </li>
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="exploremap__search">
         <SearchBox
