@@ -62,6 +62,10 @@ export function NotesPanel({ handle, startOpen = false }: Props) {
               Some viz drop low-signal accounts, e.g. the like/repost plot needs 1+
               repost per post and 5+ posts.
             </li>
+            <li>
+              Popularity numbers are over posts that got ≥1 like, so they
+              overestimate small accounts.
+            </li>
           </ul>
         )}
       </div>
