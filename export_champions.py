@@ -27,6 +27,7 @@ import os
 import time
 from pathlib import Path
 
+import httpx
 import polars as pl
 from bsky_likes import config
 
@@ -107,6 +108,60 @@ npost = (likes.select(["post_author_did", "post_uri"]).unique()
          .group_by("post_author_did").agg(pl.len().alias("npost"))
          .collect(engine="streaming"))
 print(f"aggregations done ({time.time()-t0:.0f}s)", flush=True)
+
+# --- COMPLETENESS: enrich champion-candidate authors missing from users.parquet ---
+# The master table below drops authors with no handle (not in users.parquet). The
+# uncapped sweep (Apr-Jun) reaches authors past the May users snapshot, so a genuine
+# top account could be silently replaced by the next-best. Fix: rank candidates by
+# each lens (mirrors build_variant), take the top-(TOP_K + buffer)-per-sub authors
+# that lack a profile, fetch those profiles once, and append them to users.parquet --
+# which BOTH the master join below and the avatar step read.
+def _fetch_profiles(dids):
+    api = "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles"
+    rows = []
+    with httpx.Client(timeout=30, headers={"user-agent": "bsky-likes-champ-enrich/0.1"}) as c:
+        for i in range(0, len(dids), 25):
+            try:
+                r = c.get(api, params=[("actors", x) for x in dids[i:i + 25]])
+                for p in r.json().get("profiles", []):
+                    rows.append({"did": p["did"], "handle": p.get("handle"),
+                                 "followers_count": p.get("followersCount", 0),
+                                 "follows_count": p.get("followsCount", 0),
+                                 "posts_count": p.get("postsCount", 0)})
+            except Exception as e:
+                print("  profile batch failed:", e, flush=True)
+            time.sleep(0.1)
+    return rows
+
+_known = set(pl.read_parquet(config.USERS_PATH, columns=["did"])["did"].to_list())
+_cand = (agg.join(sf, on=["sub", "post_author_did"], how="left")
+         .join(npost, on="post_author_did", how="left")
+         .join(sub_sizes, on="sub")
+         .with_columns(pl.col("superfans").fill_null(0)))
+_guf = _cand.group_by("post_author_did").agg(pl.col("uf").sum().alias("guf"))
+_cand = (_cand.join(_guf, on="post_author_did")
+         .with_columns([(pl.col("uf") / pl.col("ss")).alias("pen"),
+                        (pl.col("tl") / pl.col("npost")).alias("likeRate")])
+         .with_columns((pl.col("pen") / (pl.col("guf") / N)).alias("lift")))
+_cand_dids = set()
+for _col in ("superfans", "lift", "likeRate"):
+    _top = _cand.sort(_col, descending=True, nulls_last=True).group_by("sub").head(TOP_K + 8)
+    _cand_dids.update(_top["post_author_did"].to_list())
+_missing = sorted(x for x in _cand_dids if x and x not in _known)
+print(f"champion candidates: {len(_cand_dids):,}; missing a profile: {len(_missing):,}", flush=True)
+if _missing:
+    _rows = _fetch_profiles(_missing)
+    print(f"  enriched {len(_rows):,}/{len(_missing):,} missing authors", flush=True)
+    if _rows:
+        _existing = pl.read_parquet(config.USERS_PATH)
+        _supp = pl.DataFrame(_rows)
+        for _c in _existing.columns:                       # align to users.parquet schema
+            if _c not in _supp.columns:
+                _supp = _supp.with_columns(pl.lit(None).alias(_c))
+        _supp = _supp.select(_existing.columns).cast(dict(_existing.schema))
+        _combined = pl.concat([_existing, _supp]).unique("did", keep="first")
+        _combined.write_parquet(config.USERS_PATH, compression="zstd")
+        print(f"  users.parquet: {_existing.height:,} -> {_combined.height:,} rows", flush=True)
 
 # --- assemble the master per-(sub, author) stats table ---
 users = pl.read_parquet(config.USERS_PATH, columns=["did", "handle", "followers_count"]).unique("did")
@@ -276,3 +331,9 @@ out = {
 SITE.mkdir(parents=True, exist_ok=True)
 (SITE / "champions.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
 print(f"[OK] champions.json: {len(METRICS)} lenses ({time.time()-t0:.0f}s)", flush=True)
+
+# Pictures: fetch + inject avatars in the SAME run so the board is never left
+# picture-less after a regen (used to be a separate, easy-to-forget second script).
+import export_champion_avatars as _eca
+_eca.add_avatars()
+print(f"[OK] champions + avatars done ({time.time()-t0:.0f}s)", flush=True)
