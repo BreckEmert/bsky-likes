@@ -113,14 +113,13 @@ function labelReveals(labels: Region[], sizeBase: number): Map<Region, number> {
 }
 
 // Hand-placed annotations for the empty "voids" in the like-space -- faint gray
-// italic, overview only. (data coords, tune by eye). The handles here are casual
-// number-suffixed accounts with diffuse, mainstream likes -- no niche, hence the
-// gap between the strong clusters.
-// `name` = the faint gray italic annotation shown on the zoomed-OUT overview;
-// `community` = the bright community title it RESOLVES INTO once you zoom in past
-// the tier swap (instead of just vanishing). Same spot, two zoom states.
-const VOID_LABELS: { name: string; community: string; x: number; y: number }[] = [
-  { name: "The Normie Void", community: "Normies", x: 1.4, y: 4.62 },
+// italic. (data coords, tune by eye.) The handles here are casual number-suffixed
+// accounts with diffuse, mainstream likes -- no niche, hence the gap between the
+// strong clusters. Shown at ALL zooms in the SAME gray styling + name (it persists
+// when you zoom in instead of vanishing, but stays a gray annotation -- it does not
+// brighten to white or rename to a community).
+const VOID_LABELS: { name: string; x: number; y: number }[] = [
+  { name: "The Normie Void", x: 1.4, y: 4.62 },
 ];
 
 export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", mapView, onSwitchView }: Props) {
@@ -314,6 +313,16 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
   // the circle and the glow recedes to a thin halo -> the point gets "specific".
   const circle = clamp(pointRadius * 3.5, 2.2 * mobileScale, 16) * 0.8;
   const dotPct = clamp(0.1 + zoomPct / 240, 0.1, 0.425);
+  // Topic glow shrinks toward the crisp dot as you zoom IN, MEETING it (radius ==
+  // dot radius, so the bloom vanishes) at GLOW_FADE_PCT. Below that it blooms; at or
+  // above it only the specific dot shows. glowMul: ~1 zoomed out -> dotPct at >=60%.
+  const GLOW_FADE_PCT = 60;
+  const glowScale = clamp(
+    (GLOW_FADE_PCT - zoomPct) / (GLOW_FADE_PCT - MIN_ZOOM_PCT),
+    0,
+    1
+  );
+  const glowMul = dotPct + (1 - dotPct) * glowScale;
 
   const layers = useMemo(() => {
     if (!data || !numVisible) return [];
@@ -361,13 +370,13 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
                 getFillColor: { value: glowColors, size: 3 },
               },
             },
-            getRadius: circle * g.rMul,
+            getRadius: circle * glowMul * g.rMul,
             radiusUnits: "pixels",
-            radiusMinPixels: 2.2 * mobileScale * g.rMul,
+            radiusMinPixels: 2.2 * mobileScale * glowMul * g.rMul,
             opacity: g.op,
             pickable: false,
             updateTriggers: {
-              getRadius: [circle, glowSpread],
+              getRadius: [circle, glowSpread, glowMul],
               getFillColor: [colorMode],
             },
           })
@@ -470,15 +479,16 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
     labelTier(1, tier1Opacity, 13, isMobile ? 0.75 : 1); // broad: fades out by ~38%
     labelTier(2, tier2Opacity, 11, isMobile ? 0.9 : 1); // finer: fades in ~30-40%
 
-    // Void annotations -- faint gray italic, shown on the overview (with tier 1).
-    if (tier1Opacity > 0 && VOID_LABELS.length) {
+    // Void annotations -- faint gray italic, shown at ALL zooms in one consistent
+    // style (persists on zoom-in instead of vanishing, but stays gray + same name).
+    if (VOID_LABELS.length) {
       out.push(
         new TextLayer({
           id: "voids",
           data: VOID_LABELS,
           getPosition: (d: { x: number; y: number }) => [d.x, d.y],
           getText: (d: { name: string }) => d.name,
-          getSize: 22, // same as the region labels; only gray + opacity set it apart
+          getSize: 22, // same as the region labels; only gray + italic set it apart
           sizeUnits: "pixels",
           getColor: [150, 161, 173, 178], // gray, ~70% alpha
           fontFamily: '"DejaVu Sans", system-ui, sans-serif',
@@ -488,45 +498,12 @@ export function ExploreMap({ selectedHandle, onSelectHandle, framing = "user", m
           outlineColor: [6, 9, 14, 160],
           getTextAnchor: "middle",
           getAlignmentBaseline: "center",
-          opacity: tier1Opacity,
           pickable: false,
-          updateTriggers: { opacity: [tier1Opacity] },
-        })
-      );
-    }
-    // ... and once you zoom IN past the tier swap, the void resolves INTO a
-    // community title at the same spot (bright + bold, like the real community
-    // labels) instead of disappearing.
-    if (tier2Opacity > 0 && VOID_LABELS.length) {
-      const vScale = isMobile ? 0.9 : 1; // match tier-2 mobile shrink
-      const w = LABEL_WHITE;
-      const white = (c: number) => Math.round(c * (1 - w) + 255 * w);
-      out.push(
-        new TextLayer({
-          id: "voids-community",
-          data: VOID_LABELS,
-          getPosition: (d: { x: number; y: number }) => [d.x, d.y],
-          getText: (d: { community: string }) => d.community,
-          getSize: 20 * vScale,
-          sizeUnits: "pixels",
-          // near-white, matching the community (tier-2) titles' default tint
-          getColor: [white(240), white(246), white(252), 255],
-          fontFamily: '"DejaVu Sans", system-ui, sans-serif',
-          fontWeight: 700,
-          characterSet: "auto",
-          fontSettings: { sdf: true, buffer: 12, radius: 18 },
-          outlineWidth: 7,
-          outlineColor: [6, 9, 14, 235],
-          getTextAnchor: "middle",
-          getAlignmentBaseline: "center",
-          opacity: tier2Opacity,
-          pickable: false,
-          updateTriggers: { opacity: [tier2Opacity], getSize: [vScale] },
         })
       );
     }
     return out;
-  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, circle, dotPct, isMobile]);
+  }, [data, numVisible, selectedHandle, pointRadius, bgOpacity, regions, reveals, tier1Opacity, tier2Opacity, colorMode, glowSpread, circle, dotPct, glowMul, isMobile]);
 
   return (
     <div className="exploremap" ref={ref}>
